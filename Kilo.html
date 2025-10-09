@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VPN Server List</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; }
+    button { background: #0f9d58; color: white; border: none; padding: 10px 14px; border-radius: 5px; cursor: pointer; margin: 5px; }
+    .card { background: #1e1e1e; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    .url { word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>VPN Servers</h1>
+  <button onclick="loadVPNs()">🔄 Refresh</button>
+  <div id="vpnList">Loading...</div>
+
+  <script>
+    async function loadVPNs() {
+      try {
+        const res = await fetch("https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/servers.json");
+        if (!res.ok) throw new Error("Failed to fetch");
+        const vpnKeys = await res.json();
+        const vpnList = document.getElementById("vpnList");
+        vpnList.innerHTML = "";
+        vpnKeys.forEach(vpn => {
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <h3>${vpn.name}</h3>
+            <p class="url">${vpn.url}</p>
+            <button onclick="copyKey('${vpn.url}')">Copy</button>
+          `;
+          vpnList.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById("vpnList").innerText = "Error loading servers.";
+        console.error(err);
+      }
+    }
+
+    function copyKey(url) {
+      navigator.clipboard.writeText(url);
+      alert("Copied: " + url);
+    }
+
+    // initial load
+    loadVPNs();
+  </script>
+</body>
+</html>
