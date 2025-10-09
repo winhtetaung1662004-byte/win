@@ -1,0 +1,82 @@
+"servers": [
+    {
+      "id": 1,
+      "key": "vless://8af97f89-c75c-435f-ae32-c9b101d9e578@104.18.1.232:443?path=%2FXfqDa0HNgOTlPwYK%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=appfn2.techqito.site&fp=randomized&type=ws&sni=appfn2.techqito.site#Mytel",
+      "flag": "sg",
+      "title": "Mytel Free - 1",
+      "info": "Mytel",
+      "dns": "google.com",
+      "pro": false
+    },
+    {
+      "id": 19,
+      "key": "vless://45621cf7-5443-4b74-97af-257216a0eee0@104.18.1.232:443?path=%2F%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=apps4.ioddsuwuiehjs.shop&fp=randomized&type=ws&sni=apps4.ioddsuwuiehjs.shop#App%20S%2F4%201",
+      "flag": "sg",
+      "title": "Mytel VVIP - 1",
+      "info": "Mytel",
+      "dns": "1.1.1.1",
+      "pro": true
+    },
+    {
+      "id": 20,
+      "key": "vless://45621cf7-5443-4b74-97af-257216a0eee0@channel.wavemoney.com.mm:443?path=%2F%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=apps4s.ioddsuwuiehjs.shop&fp=randomized&type=ws&sni=apps4s.ioddsuwuiehjs.shop#App%20S%2F4%202",
+      "flag": "sg",
+      "title": "Mytel VVIP - 2",
+      "info": "Mytel",
+      "dns": "1.1.1.1",
+      "pro": true
+    },
+    {
+      "id": 73,
+      "key": "vless://e22a2227-3015-4aa4-bdaa-f7ba2f9db726@wavemoney.jklshdfjkalsdfkjhsja.shop:443?path=%2F%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=apps5.ioddsuwkjduiehjs.shop&fp=randomized&type=ws&sni=apps5.ioddsuwkjduiehjs.shop#App%20S%2F5%203",
+      "flag": "sg",
+      "title": "Mytel VVIP - 3",
+      "info": "Mytel",
+      "dns": "1.1.1.1",
+      "pro": true
+    },
+    {
+      "id": 74,
+      "key": "vless://e22a2227-3015-4aa4-bdaa-f7ba2f9db726@kbz.jklshdfjkalsdfkjhsja.shop:443?path=%2F%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=apps5s.ioddsuwkjduiehjs.shop&fp=randomized&type=ws&sni=apps5s.ioddsuwkjduiehjs.shop#App%20S%2F5%204",
+      "flag": "sg",
+      "title": "Mytel VVIP - 4",
+      "info": "OM",
+      "dns": "1.1.1.1",
+      "pro": true
+    },
+    {
+      "id": 75,
+      "key": "vless://e22a2227-3015-4aa4-bdaa-f7ba2f9db726@appnss.qehjkwenmhjkjsd.shop:443?path=%2F%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=apps7.qehjkwenmhjkjsd.shop&fp=randomized&type=ws&sni=apps7.qehjkwenmhjkjsd.shop#App%20S%2F7%205",
+      "flag": "sg",
+      "title": "Mytel VVIP - 5",
+      "info": "OM",
+      "dns": "1.1.1.1",
+      "pro": true
+    },
+    {
+      "id": 76,
+      "key": "vless://e22a2227-3015-4aa4-bdaa-f7ba2f9db726@appns.qehjkwenmhjkjsd.shop:443?path=%2F%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=apps7s.qehjkwenmhjkjsd.shop&fp=randomized&type=ws&sni=apps7s.qehjkwenmhjkjsd.shop#App%20S%2F7%206",
+      "flag": "sg",
+      "title": "Mytel VVIP - 6",
+      "info": "OM",
+      "dns": "1.1.1.1",
+      "pro": true
+    },
+    {
+      "id": 77,
+      "key": "vless://e22a2227-3015-4aa4-bdaa-f7ba2f9db726@channel.wavemoney.com.mm:443?path=%2F%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=apps8.mcvklhjsdjklfhjkhsdkjhs.shop&fp=randomized&type=ws&sni=apps8.mcvklhjsdjklfhjkhsdkjhs.shop#App%20S%2F8%207",
+      "flag": "sg",
+      "title": "Mytel VVIP - 7",
+      "info": "OM",
+      "dns": "1.1.1.1",
+      "pro": true
+    },
+    {
+      "id": 78,
+      "key": "vless://e22a2227-3015-4aa4-bdaa-f7ba2f9db726@104.18.1.232:443?path=%2F%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=apps8s.mcvklhjsdjklfhjkhsdkjhs.shop&fp=randomized&type=ws&sni=apps8s.mcvklhjsdjklfhjkhsdkjhs.shop#App%20S%2F8%208",
+      "flag": "sg",
+      "title": "Mytel VVIP - 8",
+      "info": "OM",
+      "dns": "1.1.1.1",
+      "pro": true
+    },
