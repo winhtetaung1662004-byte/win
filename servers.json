@@ -1,0 +1,20 @@
+{
+  "servers": [
+    {
+      "name": "Singapore 1",
+      "ip": "123.45.67.89",
+      "port": 443,
+      "username": "vpnuser",
+      "password": "vpnpass",
+      "type": "ssh"
+    },
+    {
+      "name": "Japan 1",
+      "ip": "98.76.54.32",
+      "port": 1194,
+      "username": "vpnuser2",
+      "password": "vpnpass2",
+      "type": "openvpn"
+    }
+  ]
+}
