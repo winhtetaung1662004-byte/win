@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My VPN Keys</title>
+  <style>
+    body {
+      background: #0e0e0e;
+      color: white;
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      font-size: 1.8em;
+      margin-bottom: 20px;
+    }
+    .vpn-card {
+      background: #1a1a1a;
+      padding: 15px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(255,255,255,0.05);
+    }
+    .vpn-card h3 {
+      margin: 0 0 10px;
+    }
+    .vpn-link {
+      color: #bbb;
+      word-break: break-all;
+      font-size: 0.9em;
+    }
+    .copy-btn {
+      margin-top: 10px;
+      background: #00b377;
+      border: none;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .copy-btn:hover {
+      background: #00a16b;
+    }
+    .refresh {
+      background: #444;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      float: right;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>
+    My VPN Keys
+    <button class="refresh" onclick="loadKeys()">⟳ Refresh</button>
+  </h2>
+
+  <div id="vpn-list">Loading...</div>
+
+  <script>
+    async function loadKeys() {
+      const container = document.getElementById('vpn-list');
+      container.innerHTML = 'Loading...';
+
+      try {
+        // ✅ ဒီနေရာကို သင့် Server URL နဲ့ပြောင်းပါ
+        const res = await fetch('key.json');
+        const data = await res.json();
+
+        container.innerHTML = '';
+        Object.entries(data).forEach(([name, link]) => {
+          const card = document.createElement('div');
+          card.className = 'vpn-card';
+          card.innerHTML = `
+            <h3>${name}</h3>
+            <p class="vpn-link">${link}</p>
+            <button class="copy-btn" onclick="copyText('${link}')">Copy</button>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        container.innerHTML = '<p style="color:red;">Failed to load keys ⚠️</p>';
+        console.error(err);
+      }
+    }
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text);
+      alert('✅ Copied!');
+    }
+
+    loadKeys();
+  </script>
+</body>
+</html>
