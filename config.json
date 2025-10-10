@@ -3,12 +3,4 @@
   "version": "1.0.0",
   "vpn_servers": [
     {
-      "name": "Mytel Server",
-      "link": "vless://8af97f89-c75c-435f-ae32-c9b101d9e578@104.18.1.232:443"
-    },
-    {
-      "name": "Ooredoo Server",
-      "link": "vless://xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@104.18.2.232:443"
-    }
-  ]
-}
+      "name": WiFi Code မရသေးပါ
