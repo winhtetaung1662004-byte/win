@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VPN Server List</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    .server-box {
+      background: #222;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 10px 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      text-align: left;
+    }
+    .server-name {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 6px;
+    }
+    .server-link {
+      background: #333;
+      padding: 8px;
+      border-radius: 6px;
+      overflow-x: auto;
+      display: inline-block;
+      width: 80%;
+    }
+    .copy-btn {
+      background: #16a34a;
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+    .copy-btn:hover {
+      background: #22c55e;
+    }
+  </style>
+</head>
+<body>
+  <h2>VPN Server List</h2>
+  <div id="server-list">Loading...</div>
+
+  <script>
+    async function loadServers() {
+      try {
+        const res = await fetch('config.json'); // JSON file path
+        const data = await res.json();
+        const container = document.getElementById('server-list');
+        container.innerHTML = '';
+
+        data.vpn_servers.forEach(server => {
+          const box = document.createElement('div');
+          box.className = 'server-box';
+          box.innerHTML = `
+            <div class="server-name">${server.name}</div>
+            <div>
+              <span class="server-link" id="${server.name.replace(/\s+/g, '_')}">${server.link}</span>
+              <button class="copy-btn" onclick="copyText('${server.name.replace(/\s+/g, '_')}')">Copy</button>
+            </div>
+          `;
+          container.appendChild(box);
+        });
+      } catch (err) {
+        document.getElementById('server-list').innerText = 'Error loading servers.';
+      }
+    }
+
+    function copyText(id) {
+      const text = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(text);
+      alert('Copied!');
+    }
+
+    loadServers();
+  </script>
+</body>
+</html>
