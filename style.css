@@ -1,0 +1,22 @@
+body {
+  font-family: sans-serif;
+  padding: 10px;
+  background: #f4f4f4;
+}
+.key {
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.key h3 {
+  margin: 0 0 5px 0;
+}
+.key button {
+  padding: 5px 10px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
