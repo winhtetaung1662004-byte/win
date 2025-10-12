@@ -1,1 +1,10 @@
-ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTp4eHl6QDEyMy4xMjMuMTIzLjEyMzo4MDgw
+[
+  {
+    "id": "key1",
+    "name": "Main Outline Server",
+    "server": "vpn.example.com:443",
+    "accessKey": "ss://Y2hhY2hhMjAtaWV0Zi1wb2x5MTMwNTp4eHl6QDEyMy4xMjMuMTIzLjEyMzo4MDgw",
+    "updatedAt": "2025-10-12T09:00:00Z"
+  }
+]
+
