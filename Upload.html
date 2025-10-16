@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Local Key Upload</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>Upload / Add Key</h2>
+  <input id="keyName" placeholder="Key name"><br><br>
+  <textarea id="keyText" placeholder="Paste key here" rows="4" cols="40"></textarea><br><br>
+  <button onclick="saveKey()">💾 Save</button>
+  <p id="status"></p>
+  <a href="list.html">➡️ Go to Key List</a>
+
+  <script>
+  function saveKey() {
+    const name = document.getElementById('keyName').value;
+    const keyText = document.getElementById('keyText').value;
+    if (!name || !keyText) {
+      alert("Please fill both fields!");
+      return;
+    }
+
+    const keys = JSON.parse(localStorage.getItem("keys") || "[]");
+    keys.push({ name, keyText, createdAt: new Date().toISOString() });
+    localStorage.setItem("keys", JSON.stringify(keys));
+    document.getElementById('status').innerText = "✅ Saved!";
+    document.getElementById('keyName').value = "";
+    document.getElementById('keyText').value = "";
+  }
+  </script>
+</body>
+</html>
