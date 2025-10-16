@@ -1,34 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Local Key Upload</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Outline VPN Keys</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    input, textarea, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #2196f3;
+      color: #fff;
+      border: none;
+    }
+    button:hover {
+      background-color: #1976d2;
+    }
+  </style>
 </head>
 <body>
-  <h2>Upload / Add Key</h2>
-  <input id="keyName" placeholder="Key name"><br><br>
-  <textarea id="keyText" placeholder="Paste key here" rows="4" cols="40"></textarea><br><br>
-  <button onclick="saveKey()">💾 Save</button>
-  <p id="status"></p>
-  <a href="list.html">➡️ Go to Key List</a>
+  <h1>Outline VPN Keys</h1>
+  <div class="container">
+    <input type="text" id="keyName" placeholder="Key Name">
+    <textarea id="keyValue" placeholder="Paste Outline Key here..." rows="4"></textarea>
+    <button onclick="saveKey()">💾 Save Key</button>
+    <button onclick="viewKeys()">📜 View Saved Keys</button>
+  </div>
 
   <script>
-  function saveKey() {
-    const name = document.getElementById('keyName').value;
-    const keyText = document.getElementById('keyText').value;
-    if (!name || !keyText) {
-      alert("Please fill both fields!");
-      return;
+    function saveKey() {
+      const name = document.getElementById("keyName").value.trim();
+      const value = document.getElementById("keyValue").value.trim();
+      if (!name || !value) {
+        alert("Please fill both fields!");
+        return;
+      }
+
+      let keys = JSON.parse(localStorage.getItem("outlineKeys") || "[]");
+      keys.push({ name, value });
+      localStorage.setItem("outlineKeys", JSON.stringify(keys));
+      alert("✅ Key saved successfully!");
+      document.getElementById("keyName").value = "";
+      document.getElementById("keyValue").value = "";
     }
 
-    const keys = JSON.parse(localStorage.getItem("keys") || "[]");
-    keys.push({ name, keyText, createdAt: new Date().toISOString() });
-    localStorage.setItem("keys", JSON.stringify(keys));
-    document.getElementById('status').innerText = "✅ Saved!";
-    document.getElementById('keyName').value = "";
-    document.getElementById('keyText').value = "";
-  }
+    function viewKeys() {
+      window.location.href = "list.html";
+    }
   </script>
 </body>
 </html>
