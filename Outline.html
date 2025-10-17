@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="my">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Outline Keys</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    margin: 0;
+    padding: 30px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 {
+    color: #7dd3fc;
+    font-size: 22px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 900px;
+  }
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+  }
+  .label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #7dd3fc;
+  }
+  .key {
+    font-family: monospace;
+    background: rgba(255,255,255,0.08);
+    padding: 8px;
+    border-radius: 6px;
+    word-break: break-all;
+    margin-bottom: 10px;
+  }
+  button {
+    background: linear-gradient(90deg,#38bdf8,#0ea5e9);
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: #082f49;
+    width: 100%;
+  }
+  .toast {
+    display: none;
+    position: fixed;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #082f49;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  footer {
+    margin-top: 30px;
+    font-size: 12px;
+    color: #64748b;
+  }
+</style>
+</head>
+<body>
+  <h1>My Outline Keys</h1>
+  <div class="grid" id="keys"></div>
+  <div class="toast" id="toast">Copied!</div>
+  <footer>© 2025 — Outline Key Viewer</footer>
+
+<script>
+  // 🔹 မင်းရဲ့ key များကို ဒီ array ထဲထည့်ပါ
+  const keys = [
+    { label: "Main Server", value: "vless://8af97f89-c75c-435f-ae32-c9b101d9e578@104.18.1.232:443?path=%2FXfqDa0HNgOTlPwYK%3Fed%3D2560&security=tls&alpn=http%2F1.1&encryption=none&host=appfn2.techqito.site&fp=randomized&type=ws&sni=appfn2.techqito.site#Mytel" },
+    ];
+
+  const container = document.getElementById('keys');
+  const toast = document.getElementById('toast');
+
+  keys.forEach(k => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="label">${k.label}</div>
+      <div class="key">${k.value}</div>
+      <button>Copy</button>
+    `;
+    const btn = card.querySelector('button');
+    btn.addEventListener('click', async ()=>{
+      try {
+        await navigator.clipboard.writeText(k.value);
+        toast.textContent = 'Copied!';
+        toast.style.display = 'block';
+        setTimeout(()=>toast.style.display='none',1200);
+      } catch(e){
+        const ta=document.createElement('textarea');
+        ta.value=k.value;document.body.appendChild(ta);
+        ta.select();document.execCommand('copy');ta.remove();
+        toast.textContent='Copied (fallback)';toast.style.display='block';
+        setTimeout(()=>toast.style.display='none',1200);
+      }
+    });
+    container.appendChild(card);
+  });
+</script>
+</body>
+</html>
