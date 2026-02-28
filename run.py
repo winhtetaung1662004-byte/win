@@ -14,7 +14,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
 # !!! ဒီနေရာမှာ GitHub Gist ရဲ့ RAW Link ကိုထည့်ပါ !!!
-KEYS_URL = "https://gist.githubusercontent.com/yourusername/yourgistid/raw/tokens.txt"
+KEYS_URL = "https://https://github.com/winhtetaung1662004-byte/win/blob/cde5b29965d12d8016717f0e0bfd2b76cbc69c77/keys.txt"
 
 # --- TOKEN LICENSE SYSTEM (Hours/Days) ---
 def check_license():
