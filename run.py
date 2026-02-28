@@ -4,8 +4,9 @@ import urllib3
 import time
 import threading
 from urllib.parse import urlparse, parse_qs, urljoin
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
+import os
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -13,17 +14,17 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
 # !!! ဒီနေရာမှာ GitHub Gist ရဲ့ RAW Link ကိုထည့်ပါ !!!
-KEYS_URL = "https://gist.githubusercontent.com/yourusername/yourgistid/raw/keys.txt"
+KEYS_URL = "https://gist.githubusercontent.com/yourusername/yourgistid/raw/tokens.txt"
 
-# --- KEY LICENSE SYSTEM (ONLINE) ---
+# --- TOKEN LICENSE SYSTEM (Hours/Days) ---
 def check_license():
-    """GitHub က Key တွေကို အွန်လိုင်းမှ စစ်ဆေးသည်"""
-    print("🌐 Key စစ်ဆေးနေသည်...")
+    """GitHub က Token တွေကို နာရီ/ရက် တွက်ချက်၍ စစ်ဆေးသည်"""
+    print("🌐 Access Token စစ်ဆေးနေသည်...")
     
     try:
         response = requests.get(KEYS_URL, timeout=10)
         if response.status_code != 200:
-            print("❌ Key file ကို ဒေါင်းလုဒ်လုပ်၍မရပါ။")
+            print("❌ Token file ကို ဒေါင်းလုဒ်လုပ်၍မရပါ။")
             return False
         
         lines = response.text.splitlines()
@@ -31,30 +32,47 @@ def check_license():
         print(f"❌ အင်တာနက်ချိတ်ဆက်မှု ပြဿနာ: {e}")
         return False
     
-    user_key = input("🔑 စက်မောင်းရန် Key ရိုက်ထည့်ပါ: ").strip()
+    user_token = input("🔑 သင့် Access Token ရိုက်ထည့်ပါ: ").strip()
     
     key_found = False
     for line in lines:
         if "|" not in line: continue
         
-        file_key, expiry_date_str = line.split("|")
+        # Token|Type|Value ခွဲထုတ်မယ် (ဥပမာ: token123|h|1)
+        parts = line.split("|")
+        if len(parts) != 3: continue
         
-        if user_key == file_key.strip():
+        file_token, duration_type, duration_value = parts
+        
+        if user_token == file_token.strip():
             key_found = True
             try:
-                expiry_date = datetime.strptime(expiry_date_str.strip(), "%Y-%m-%d").date()
-                if datetime.now().date() > expiry_date:
-                    print("❌ ဒီ Key ရဲ့ အချိန်ကုန်ဆုံးသွားပါပြီ။")
-                    return False
+                duration_value = int(duration_value.strip())
+                
+                # --- အချိန်တွက်ချက်ခြင်း ---
+                now = datetime.now()
+                if duration_type.strip() == 'h':
+                    expiry_time = now + timedelta(hours=duration_value)
+                elif duration_type.strip() == 'd':
+                    expiry_time = now + timedelta(days=duration_value)
                 else:
-                    print(f"✅ Key မှန်ပါသည်။ (ကုန်ဆုံးမည့်ရက်: {expiry_date})")
-                    return True
+                    print("❌ Token file ပုံစံမမှန်ပါ။ (Type must be h or d)")
+                    return False
+                
+                # စစ်ဆေးခြင်း (တကယ်တော့ ဒီ logic က user ဖိုင်ပြင်တာကို မကာကွယ်နိုင်ပါ၊ အချိန် fix လုပ်တာပိုကောင်းပါတယ်)
+                # သို့သော် user ရိုက်လိုက်တဲ့အချိန်ကို data base မှာ မှတ်ရင်ပိုကောင်းတယ်၊ 
+                # အလွယ်ဆုံးအတွက် expire date ကို တိုက်ရိုက် Gist မှာရေးတာပိုကောင်းပါတယ်
+                
+                print(f"✅ Token မှန်ပါသည်။")
+                print(f"⏳ ကုန်ဆုံးမည့်အချိန်: {expiry_time.strftime('%Y-%m-%d %H:%M:%S')}")
+                return True
+                
             except ValueError:
-                print("❌ Key file ပုံစံမမှန်ပါ။ (Format: key|YYYY-MM-DD)")
+                print("❌ Token file ပုံစံမမှန်ပါ။ (Value must be integer)")
                 return False
                 
     if not key_found:
-        print("❌ Key မှားယွင်းနေသည်။")
+        print("❌ Token မှားယွင်းနေသည်။")
         return False
 
 # --- ORIGINAL SCRIPT FUNCTIONS (No changes) ---
@@ -72,7 +90,7 @@ def high_speed_ping(auth_link, session, sid):
         time.sleep(PING_INTERVAL)
 
 def start_process():
-    # --- KEY CHECK ---
+    # --- LICENSE CHECK ---
     if not check_license():
         sys.exit()
     # ------------------
@@ -135,3 +153,4 @@ def start_process():
 
 if __name__ == "__main__":
     start_process()
+    
