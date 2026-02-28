@@ -4,7 +4,6 @@ import urllib3
 import time
 import threading
 from urllib.parse import urlparse, parse_qs, urljoin
-from datetime import datetime, timedelta
 import sys
 import os
 
@@ -13,12 +12,12 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
-# !!! ဒီနေရာမှာ GitHub Gist ရဲ့ RAW Link ကိုထည့်ပါ !!!
-KEYS_URL = "https://https://github.com/winhtetaung1662004-byte/win/blob/cde5b29965d12d8016717f0e0bfd2b76cbc69c77/keys.txt"
+# !!! သင့်ရဲ့ GitHub Raw Link ကို ဒီမှာထည့်ပါ !!!
+KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 
-# --- TOKEN LICENSE SYSTEM (Hours/Days) ---
+# --- TOKEN LICENSE SYSTEM ---
 def check_license():
-    """GitHub က Token တွေကို နာရီ/ရက် တွက်ချက်၍ စစ်ဆေးသည်"""
+    """GitHub က Token တွေကို စစ်ဆေးသည်"""
     print("🌐 Access Token စစ်ဆေးနေသည်...")
     
     try:
@@ -26,62 +25,33 @@ def check_license():
         if response.status_code != 200:
             print("❌ Token file ကို ဒေါင်းလုဒ်လုပ်၍မရပါ။")
             return False
-        
+            
         lines = response.text.splitlines()
     except Exception as e:
-        print(f"❌ အင်တာနက်ချိတ်ဆက်မှု ပြဿနာ: {e}")
+        print(f"❌ အင်တာနက်ချိတ်ဆက်မှု ပြဿနာ {e}")
         return False
+        
+    user_token = input("🔑 သင့် Access Token ရိုက်ထည့်ပါ: ")
     
-    user_token = input("🔑 သင့် Access Token ရိုက်ထည့်ပါ: ").strip()
-    
-    key_found = False
     for line in lines:
         if "|" not in line: continue
+        key, unit, amount = line.split("|")
         
-        # Token|Type|Value ခွဲထုတ်မယ် (ဥပမာ: token123|h|1)
-        parts = line.split("|")
-        if len(parts) != 3: continue
-        
-        file_token, duration_type, duration_value = parts
-        
-        if user_token == file_token.strip():
-            key_found = True
-            try:
-                duration_value = int(duration_value.strip())
-                
-                # --- အချိန်တွက်ချက်ခြင်း ---
-                now = datetime.now()
-                if duration_type.strip() == 'h':
-                    expiry_time = now + timedelta(hours=duration_value)
-                elif duration_type.strip() == 'd':
-                    expiry_time = now + timedelta(days=duration_value)
-                else:
-                    print("❌ Token file ပုံစံမမှန်ပါ။ (Type must be h or d)")
-                    return False
-                
-                # စစ်ဆေးခြင်း (တကယ်တော့ ဒီ logic က user ဖိုင်ပြင်တာကို မကာကွယ်နိုင်ပါ၊ အချိန် fix လုပ်တာပိုကောင်းပါတယ်)
-                # သို့သော် user ရိုက်လိုက်တဲ့အချိန်ကို data base မှာ မှတ်ရင်ပိုကောင်းတယ်၊ 
-                # အလွယ်ဆုံးအတွက် expire date ကို တိုက်ရိုက် Gist မှာရေးတာပိုကောင်းပါတယ်
-                
-                print(f"✅ Token မှန်ပါသည်။")
-                print(f"⏳ ကုန်ဆုံးမည့်အချိန်: {expiry_time.strftime('%Y-%m-%d %H:%M:%S')}")
-                return True
-                
-            except ValueError:
-                print("❌ Token file ပုံစံမမှန်ပါ။ (Value must be integer)")
-                return False
-                
-    if not key_found:
-        print("❌ Token မှားယွင်းနေသည်။")
-        return False
+        if key == user_token:
+            print("✅ Token မှန်ကန်ပါသည်။")
+            return True
+            
+    print("❌ Token မှားယွင်းနေပါသည်။")
+    return False
 
-# --- ORIGINAL SCRIPT FUNCTIONS (No changes) ---
+# --- INTERNET ACCESS LOGIC (CAPTIVE PORTAL) ---
 def check_real_internet():
     try:
         return requests.get("http://www.google.com", timeout=3).status_code == 200
     except: return False
 
 def high_speed_ping(auth_link, session, sid):
+    """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း"""
     while True:
         try:
             res = session.get(auth_link, timeout=5)
@@ -90,11 +60,6 @@ def high_speed_ping(auth_link, session, sid):
         time.sleep(PING_INTERVAL)
 
 def start_process():
-    # --- LICENSE CHECK ---
-    if not check_license():
-        sys.exit()
-    # ------------------
-    
     print(f"[{time.strftime('%H:%M:%S')}] Turbo Script with Voucher Initialization...")
     
     while True:
@@ -129,6 +94,7 @@ def start_process():
                 print(f"\n[*] Activating Session with Voucher API...")
                 voucher_api = f"{portal_host}/api/auth/voucher/"
                 try:
+                    # accessCode နေရာတွင် 123456 အပြင် လိုအပ်ပါက ပြောင်းလဲနိုင်သည်
                     v_res = session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
                     print(f"[+] Voucher API Response: {v_res.status_code}")
                 except:
@@ -151,6 +117,11 @@ def start_process():
         except Exception as e:
             time.sleep(5)
 
+# --- MAIN RUNNER ---
 if __name__ == "__main__":
-    start_process()
-    
+    if check_license():
+        print("🚀 Script စတင်နေပါပြီ... အင်တာနက် ချိတ်ဆက်ရန် ကြိုးစားနေသည်...")
+        start_process()
+    else:
+        print("🚫 အသုံးပြုခွင့် မရှိပါ။")
+        
