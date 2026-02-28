@@ -12,16 +12,16 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
-# သင်ပေးထားသော RAW Link (GitHub မှ keys.txt)
-KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/1d9208ba86e511e966f5cb5ef6130a72cb794a5f/keys.txt"
+# !!! အောက်ပါ Link အမှန်ကို သုံးပါ !!!
+KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-# --- TOKEN LICENSE SYSTEM (DATE-BASED) ---
+# --- TOKEN LICENSE SYSTEM ---
 def check_license():
-    """Token တောင်းခြင်းနှင့် ရက်စွဲအခြေခံသက်တမ်းစစ်ခြင်း"""
+    """Token တောင်းခြင်းနှင့် သက်တမ်းစစ်ခြင်း"""
     clear_screen()
     print("========================================")
     print("       🔑 TOKEN ACCESS SYSTEM         ")
@@ -50,6 +50,8 @@ def check_license():
                 end_date = start_date + timedelta(days=amount)
             elif unit == 'h':
                 end_date = start_date + timedelta(hours=amount)
+            elif unit == 'm':
+                end_date = start_date + timedelta(minutes=amount)
             else:
                 return False
             
@@ -86,14 +88,13 @@ def countdown_timer(remaining_time):
     os._exit(0)
 
 # --- INTERNET ACCESS LOGIC (CAPTIVE PORTAL) ---
-# (Internet Access Code သည် ယခင်အတိုင်းဖြစ်သည်)
 def check_real_internet():
     try:
         return requests.get("http://www.google.com", timeout=3).status_code == 200
     except: return False
 
 def high_speed_ping(auth_link, session, sid):
-    """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း"""
+    """Auth Link ကို အဆက်မပြတ် Request Pို့ပေးခြင်း"""
     while True:
         try:
             res = session.get(auth_link, timeout=5)
@@ -159,4 +160,3 @@ if __name__ == "__main__":
         start_process()
     else:
         print("🚫 အသုံးပြုခွင့် မရှိပါ။")
-        
