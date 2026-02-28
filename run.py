@@ -218,5 +218,58 @@ def start_fast_harvesting():
 def view_success_codes():
     clear_screen()
     print("========================================")
-    print("         📋 SUCCESS CODES LIST
+    print("         📋 SUCCESS CODES LIST          ")
+    print("========================================")
+    if os.path.exists(SUCCESS_CODES_FILE):
+        with open(SUCCESS_CODES_FILE, "r") as f:
+            codes = f.read()
+            if codes:
+                print(codes)
+            else:
+                print("No success codes found.")
+    else:
+        print("No success codes found.")
+    print("========================================")
+    input("👉 Enter ကိုနှိပ်ပြီး Menu သို့ပြန်သွားပါ။")
+
+# --- MENU SYSTEM ---
+def show_menu():
+    clear_screen()
+    tried_count = 0
+    if os.path.exists(TRIED_CODES_FILE):
+        with open(TRIED_CODES_FILE, "r") as f:
+            tried_count = len(f.readlines())
     
+    success_count = 0
+    if os.path.exists(SUCCESS_CODES_FILE):
+        with open(SUCCESS_CODES_FILE, "r") as f:
+            success_count = len(f.readlines())
+
+    print("========================================")
+    print("         🛠️  VOUCHER TOOLKIT           ")
+    print("========================================")
+    print(f"📊 စမ်းသပ်ပြီး: {tried_count} | 🎯 အောင်မြင်: {success_count}")
+    print("========================================")
+    print("1. 🔍 Test Specific Code")
+    print("2. 🌐 Internet Access (Use Saved Code)")
+    print("3. 🚀 Fast Harvesting + Internet")
+    print("4. 📋 View Success Codes")
+    print("========================================\n")
+    choice = input("👉 ရွေးချယ်ပါ (1-4): ")
+    return choice
+
+if __name__ == "__main__":
+    while True:
+        choice = show_menu()
+        if choice == '1':
+            test_specific_code()
+        elif choice == '2':
+            use_internet_access()
+        elif choice == '3':
+            start_fast_harvesting()
+        elif choice == '4':
+            view_success_codes()
+        else:
+            print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
+            time.sleep(1)
+            
