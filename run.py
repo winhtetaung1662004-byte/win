@@ -31,12 +31,10 @@ def load_tried_codes():
 
 def save_tried_code(code):
     with open(TRIED_CODES_FILE, "a") as f:
-        # --- အမှားပြင်ဆင်ချက်: f-string တွင် curly braces များသေချာပိတ်ရန် ---
         f.write(f"{code}\n")
 
 def save_success_code(code):
     with open(SUCCESS_CODES_FILE, "a") as f:
-        # --- အမှားပြင်ဆင်ချက်: f-string တွင် curly braces များသေချာပိတ်ရန် ---
         f.write(f"{code}\n")
 
 # --- MENU SYSTEM ---
@@ -77,8 +75,8 @@ def test_code(code, portal_host, sid, session):
         
         # --- RESPONSE စစ်ဆေးခြင်း ---
         if v_res.status_code == 200:
+            # တိကျစွာစစ်ဆေးခြင်း (Response text တွင် "success" ဟု တိတိကျကျပါမှ ယူမည်)
             if "\"success\"" in v_res.text:
-                # SUCCESS အစိမ်းရောင်တန်းကျလာမည်
                 print(f"\n\033[92m✅ SUCCESS! Valid Code Found: {code}\033[0m")
                 save_success_code(code)
                 return True
@@ -170,8 +168,10 @@ def use_internet_access():
     voucher_api = f"{portal_host}/api/auth/voucher/"
     
     try:
+        # Code အသုံးပြုခြင်း
         v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
         
+        # --- RESPONSE စစ်ဆေးခြင်း ---
         if v_res.status_code == 200 and "\"success\"" in v_res.text:
             print(f"\n\033[92m✅ SUCCESS! Internet Access Connected with Code: {code}\033[0m")
         else:
