@@ -12,7 +12,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
-# !!! အောက်ပါ Link အမှန်ကို သုံးပါ !!!
+# !!! သင့် keys.txt ရဲ့ RAW Link ကို ဒီမှာထည့်ပါ !!!
 KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 
 # --- CLEAR SCREEN FUNCTION ---
@@ -21,14 +21,16 @@ def clear_screen():
 
 # --- TOKEN LICENSE SYSTEM ---
 def check_license():
-    """Token တောင်းခြင်းနှင့် သက်တမ်းစစ်ခြင်း"""
+    """Token တောင်းခြင်းနှင့် သက်တမ်းစစ်ခြင်း (Cache ကျော်ရန် ပြင်ဆင်ထားသည်)"""
     clear_screen()
     print("========================================")
     print("       🔑 TOKEN ACCESS SYSTEM         ")
     print("========================================\n")
     
     try:
-        response = requests.get(KEYS_URL, timeout=10)
+        # Cache မမိအောင် URL အမြီးမှာ Timestamp ထည့်ခြင်း
+        url_with_cache_buster = f"{KEYS_URL}?t={int(time.time())}"
+        response = requests.get(url_with_cache_buster, timeout=10)
         lines = response.text.splitlines()
     except Exception as e:
         print(f"❌ Connection Error: {e}")
@@ -160,3 +162,4 @@ if __name__ == "__main__":
         start_process()
     else:
         print("🚫 အသုံးပြုခွင့် မရှိပါ။")
+                
