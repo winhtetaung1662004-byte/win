@@ -14,7 +14,6 @@ ssl._create_default_https_context = ssl._create_unverified_context
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
-KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 TRIED_CODES_FILE = "tried_codes.txt"
 SUCCESS_CODES_FILE = "success.txt"
 CODE_TO_TEST = "536884" 
@@ -39,72 +38,17 @@ def save_success_code(code):
     with open(SUCCESS_CODES_FILE, "a") as f:
         f.write(f"{code}\n")
 
-# --- TOKEN LICENSE SYSTEM ---
-def check_license():
-    clear_screen()
-    print("========================================")
-    print("       🔑 TOKEN ACCESS SYSTEM         ")
-    print("========================================\n")
-    
-    try:
-        url_with_cache_buster = f"{KEYS_URL}?t={int(time.time())}"
-        response = requests.get(url_with_cache_buster, timeout=5)
-        lines = response.text.splitlines()
-        with open("keys_local.txt", "w") as f:
-            f.write(response.text)
-    except:
-        if os.path.exists("keys_local.txt"):
-            with open("keys_local.txt", "r") as f:
-                lines = f.readlines()
-        else:
-            print("❌ အင်တာနက်မရှိပါ၊ Local Keys လည်းမရှိပါ။")
-            return False
-        
-    user_token = input("👉 သင့် Token ကိုရိုက်ထည့်ပါ: ")
-    
-    for line in lines:
-        if "|" not in line or line.startswith("#"): continue
-        try:
-            key, start_date_str, unit, amount = line.split("|")
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
-            amount = int(amount)
-        except: continue
-        
-        if key == user_token:
-            if unit == 'd':
-                end_date = start_date + timedelta(days=amount)
-            elif unit == 'h':
-                end_date = start_date + timedelta(hours=amount)
-            elif unit == 'm':
-                end_date = start_date + timedelta(minutes=amount)
-            else:
-                return False
-            
-            remaining = end_date - datetime.now()
-            
-            if remaining.total_seconds() <= 0:
-                print("\n❌ သက်တမ်းကုန်ဆုံးသွားပါပြီ။")
-                return False
-            else:
-                print(f"\n✅ သက်တမ်းရှိသည်။ ကုန်ဆုံးချိန်: {end_date}")
-                time.sleep(2)
-                return True
-            
-    print("\n❌ Token မှားယွင်းနေပါသည်။")
-    return False
-
 # --- MENU SYSTEM ---
 def show_menu():
     clear_screen()
     print("========================================")
-    print("         🛠️  MAIN MENU                ")
+    print("         🛠️  VOUCHER HARVESTER          ")
     print("========================================")
-    print("1. 🌐 Internet Access")
-    print(f"2. 🔍 Fast Random Voucher Harvesting")
-    print(f"3. 🔍 Test Specific Code: {CODE_TO_TEST}")
-    print("4. 📋 View Success Codes")
+    print("1. 🔍 Fast Random Voucher Harvesting")
+    print(f"2. 🔍 Test Specific Code: {CODE_TO_TEST}")
+    print("3. 📋 View Success Codes")
     print("========================================\n")
-    choice = input("👉 ရွေးချယ်ပါ (1-4): ")
+    choice = input("👉 ရွေးချယ်ပါ (1-3): ")
     return choice
 
 # --- PORTAL AUTO DETECT ---
@@ -214,22 +158,19 @@ def test_specific_code():
 
 # --- MAIN RUNNER ---
 if __name__ == "__main__":
-    if check_license():
-        choice = show_menu()
-        if choice == '1':
-            print("\n🌐 Internet Access... (Logic implementation needed)")
-        elif choice == '2':
-            start_voucher_harvesting()
-        elif choice == '3':
-            test_specific_code()
-        elif choice == '4':
-            print("\n📋 Success Code များ:")
-            if os.path.exists(SUCCESS_CODES_FILE):
-                with open(SUCCESS_CODES_FILE, "r") as f:
-                    print(f.read())
-            else:
-                print("No success codes found.")
-            time.sleep(5)
+    choice = show_menu()
+    if choice == '1':
+        start_voucher_harvesting()
+    elif choice == '2':
+        test_specific_code()
+    elif choice == '3':
+        print("\n📋 Success Code များ:")
+        if os.path.exists(SUCCESS_CODES_FILE):
+            with open(SUCCESS_CODES_FILE, "r") as f:
+                print(f.read())
         else:
-            print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
-            
+            print("No success codes found.")
+        time.sleep(5)
+    else:
+        print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
+        
