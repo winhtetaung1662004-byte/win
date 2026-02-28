@@ -18,7 +18,7 @@ KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/k
 TRIED_CODES_FILE = "tried_codes.txt"
 SUCCESS_CODES_FILE = "success.txt"
 CODE_TO_TEST = "536884" 
-VOUCHER_THREADS = 100 # --- မြန်နှုန်းမြှင့်ရန် Thread တိုးခြင်း ---
+VOUCHER_THREADS = 100 
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
@@ -46,16 +46,13 @@ def check_license():
     print("       🔑 TOKEN ACCESS SYSTEM         ")
     print("========================================\n")
     
-    # --- INTERNET မရှိရင်လည်း Token တောင်းရန် ---
     try:
         url_with_cache_buster = f"{KEYS_URL}?t={int(time.time())}"
         response = requests.get(url_with_cache_buster, timeout=5)
         lines = response.text.splitlines()
-        # အင်တာနက်ရရင် အသစ်ရအောင်လုပ်မယ်
         with open("keys_local.txt", "w") as f:
             f.write(response.text)
     except:
-        # အင်တာနက်မရရင် Local ကာကွယ်ထားတာကိုသုံးမယ်
         if os.path.exists("keys_local.txt"):
             with open("keys_local.txt", "r") as f:
                 lines = f.readlines()
