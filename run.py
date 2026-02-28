@@ -12,8 +12,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
-# !!! သင့်ရဲ့ GitHub Raw Link ကို ဒီမှာထည့်ပါ !!!
-KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
+# သင်ပေးထားသော RAW Link အမှန်ကို ထည့်သွင်းထားသည်
+KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/1d9208ba86e511e966f5cb5ef6130a72cb794a5f/keys.txt"
 
 # --- TOKEN LICENSE SYSTEM ---
 def check_license():
