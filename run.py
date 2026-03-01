@@ -9,15 +9,15 @@ import sys
 from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs, urljoin
 
-# --- TERMUX SSL FIX ---
-# SSL certificate အမှားတက်ခြင်းကို ကျော်လွှားရန်
+# --- TERMUX SSL & HTTPS FIX ---
+# SSL certificate အမှားတက်ခြင်းကို လုံးဝကျော်လွှားရန်
 ssl._create_default_https_context = ssl._create_unverified_context
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
 CACHE_FILE = "device_cache.txt"
-# <--- သင့် Raw Link ကို ဒီမှာ သေချာထည့်ပါ --->
-GITHUB_TOKEN_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
+# <--- အရေးကြီး: လင့်ခ်ကို https အစား http နဲ့ သုံးကြည့်ပါ --->
+GITHUB_TOKEN_URL = "http://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
 TOKEN_DURATION_HOURS = 1 
@@ -30,9 +30,13 @@ def clear_screen():
 def get_latest_token():
     """GitHub ကနေ နောက်ဆုံး Token ကိုယူခြင်း"""
     try:
-        response = requests.get(GITHUB_TOKEN_URL, timeout=10, verify=False)
+        # verify=False ထည့်ထားသည်
+        response = requests.get(GITHUB_TOKEN_URL, timeout=10, verify=False) 
         if response.status_code == 200:
-            return response.text.strip()
+            # စာကြောင်းလိုက်ဖတ်ပြီး Token ကိုယူသည်
+            lines = response.text.strip().split('\n')
+            if lines:
+                return lines[0].strip() 
     except Exception as e:
         print(f"❌ GitHub ကနေ Token ယူမရပါ။ Error: {e}")
     return None
@@ -112,8 +116,9 @@ def turbo_token_access():
         time.sleep(2)
         return
 
-    # 3. Token တူမတူစစ်ခြင်း
-    if user_token != latest_token:
+    # 3. Token တူမတူစစ်ခြင်း (Token | Date စနစ်ကို သုံးသည်)
+    valid_tokens = [line.split('|')[0].strip() for line in latest_token.split('\n')]
+    if user_token not in valid_tokens:
         print("❌ Token မှားယွင်းနေသည်။")
         time.sleep(2)
         return
@@ -122,12 +127,12 @@ def turbo_token_access():
 
     # 4. Cache စစ်ခြင်း
     cached_token = check_cache()
-    if cached_token and cached_token == latest_token:
-        print(f"✅ Cached Token က နောက်ဆုံးပေါ်ဖြစ်နေသည်: {latest_token}")
+    if cached_token and cached_token == user_token:
+        print(f"✅ Cached Token က နောက်ဆုံးပေါ်ဖြစ်နေသည်: {user_token}")
         token = cached_token
     else:
-        print(f"🔄 Token အသစ်တွေ့ရှိသည်: {latest_token}")
-        token = latest_token
+        print(f"🔄 Token အသစ်တွေ့ရှိသည်: {user_token}")
+        token = user_token
         save_cache(token)
 
     # 5. Portal နှင့် Session ID ယူခြင်း
