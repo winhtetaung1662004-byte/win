@@ -23,12 +23,13 @@ TOKEN_DURATION_HOURS = 1
 
 # --- FUNCTIONS ---
 def clear_screen():
+    """မျက်နှာပြင်ကို ရှင်းလင်းခြင်း"""
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def get_latest_token():
     """GitHub ကနေ နောက်ဆုံး Token ကိုယူခြင်း"""
     try:
-        response = requests.get(GITHUB_TOKEN_URL, timeout=10, verify=False) # verify=False ထည့်ထားသည်
+        response = requests.get(GITHUB_TOKEN_URL, timeout=10, verify=False)
         if response.status_code == 200:
             return response.text.strip()
     except Exception as e:
@@ -36,6 +37,7 @@ def get_latest_token():
     return None
 
 def check_cache():
+    """Cached Token ရှိမရှိစစ်ခြင်း"""
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, "r") as f:
             data = f.read().strip()
@@ -44,6 +46,7 @@ def check_cache():
     return None
 
 def save_cache(token):
+    """Token ကို ဖိုင်တွင်သိမ်းဆည်းခြင်း"""
     with open(CACHE_FILE, "w") as f:
         f.write(token)
 
@@ -87,16 +90,34 @@ def countdown_timer(end_time):
 
 # --- MENU FUNCTION ---
 def turbo_token_access():
+    """Token Access ပြုလုပ်ခြင်း"""
+    clear_screen()
     print("\n🌐 Turbo Token Access စတင်ပြီ...")
     
-    # 1. GitHub ကနေ Token ယူခြင်း
-    latest_token = get_latest_token()
-    if not latest_token:
-        print("❌ Token မရရှိပါ။ (GitHub လင့်ခ်စစ်ပါ)")
+    # 1. သုံးမယ့်သူကို Token ရိုက်ခိုင်းခြင်း
+    user_token = input("👉 Activation Token ထည့်ပါ: ").strip()
+    
+    if not user_token:
+        print("❌ Token ထည့်ပေးရန်လိုအပ်သည်။")
         time.sleep(2)
         return
 
-    # 2. Cache စစ်ခြင်း
+    # 2. GitHub ကနေ Token ယူခြင်း
+    latest_token = get_latest_token()
+    if not latest_token:
+        print("❌ GitHub ကနေ Token ယူမရပါ။ (Internet စစ်ပါ)")
+        time.sleep(2)
+        return
+
+    # 3. Token တူမတူစစ်ခြင်း
+    if user_token != latest_token:
+        print("❌ Token မှားယွင်းနေသည်။")
+        time.sleep(2)
+        return
+    
+    print("✅ Token မှန်ကန်ပါသည်။")
+
+    # 4. Cache စစ်ခြင်း
     cached_token = check_cache()
     if cached_token and cached_token == latest_token:
         print(f"✅ Cached Token က နောက်ဆုံးပေါ်ဖြစ်နေသည်: {latest_token}")
@@ -106,7 +127,7 @@ def turbo_token_access():
         token = latest_token
         save_cache(token)
 
-    # 3. Portal နှင့် Session ID ယူခြင်း
+    # 5. Portal နှင့် Session ID ယူခြင်း
     portal_host, portal_url = get_portal_info()
     if not portal_host:
         print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
@@ -122,7 +143,7 @@ def turbo_token_access():
         
     print(f"📡 Session Found: {sid}")
 
-    # 4. Token API သုံးပြီး Activation
+    # 6. Token API သုံးပြီး Activation
     voucher_api = f"{portal_host}/api/auth/voucher/"
     
     print(f"📡 Token ချိတ်ဆက်နေသည်: {token}")
@@ -137,7 +158,7 @@ def turbo_token_access():
         print(f"❌ Error during activation: {e}")
         return
 
-    # 5. Turbo Pinging Threads များ (Gateway Auth Link)
+    # 7. Turbo Pinging Threads များ (Gateway Auth Link)
     parsed_portal = urlparse(portal_url)
     params = parse_qs(parsed_portal.query)
     gw_addr = params.get('gw_address', ['192.168.60.1'])[0]
@@ -157,7 +178,7 @@ def turbo_token_access():
     for _ in range(PING_THREADS):
         threading.Thread(target=high_speed_ping, daemon=True).start()
 
-    # 6. Countdown Timer Thread စတင်ခြင်း
+    # 8. Countdown Timer Thread စတင်ခြင်း
     end_time = datetime.now() + timedelta(hours=TOKEN_DURATION_HOURS)
     threading.Thread(target=countdown_timer, args=(end_time,), daemon=True).start()
 
@@ -171,27 +192,7 @@ def turbo_token_access():
             break
 
 # --- MAIN ---
-def show_menu():
-    clear_screen()
-    print("========================================")
-    print("         🛠️  VOUCHER TOOLKIT           ")
-    print("========================================")
-    print("1. 🌐 Turbo Token Access (GitHub)")
-    print("2. 🔄 Reset Cache (Force Check)")
-    print("========================================\n")
-    choice = input("👉 ရွေးချယ်ပါ (1-2): ")
-    return choice
-
 if __name__ == "__main__":
-    while True:
-        choice = show_menu()
-        if choice == '1':
-            turbo_token_access()
-        elif choice == '2':
-            if os.path.exists(CACHE_FILE): os.remove(CACHE_FILE)
-            print("✅ Cache ဖျက်ပြီးပါပြီ။")
-            time.sleep(1)
-        else:
-            print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
-            time.sleep(1)
-            
+    # စတင်တာနဲ့ Token တောင်းပြီး run မယ်
+    turbo_token_access()
+    
