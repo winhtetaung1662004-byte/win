@@ -86,7 +86,7 @@ def countdown_timer(end_time):
         remaining = end_time - datetime.now()
         if remaining.total_seconds() <= 0:
             print("\n⏳ Token သက်တမ်းကုန်ဆုံးသွားပါပြီ။")
-            os._exit(0) # Script ကို ရပ်လိုက်မည်
+            os._exit(0)
         
         # Header မှာ အချိန်ပြပေးခြင်း
         print(f"\r[⏱️] သက်တမ်းကုန်ရန် ကျန်ရှိချိန်: {remaining}", end="", flush=True)
@@ -156,7 +156,6 @@ def turbo_token_access():
         while True:
             try:
                 res = session.get(auth_link, timeout=5)
-                # သတိပြုရန်: Pinging status တွင် Countdown မြင်ရမည်မဟုတ်ပါ
             except:
                 pass
             time.sleep(PING_INTERVAL)
