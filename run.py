@@ -17,7 +17,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 CACHE_FILE = "device_cache.txt"
 # <--- သင့် Raw Link ကို ဒီမှာ သေချာထည့်ပါ --->
-GITHUB_TOKEN_URL = "win/raw.githubusercontent.com/winhtetaung1662004-byte/win/mainmains.txt"
+GITHUB_TOKEN_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
 TOKEN_DURATION_HOURS = 1 
