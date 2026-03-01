@@ -72,16 +72,23 @@ def get_session_id(session, portal_url):
 # --- BACKGROUND PINGER ---
 def start_background_ping(session, portal_host, sid):
     """Session ပြတ်မသွားအောင် Background မှာ Ping ပေးခြင်း"""
+    # Portal ပေါ်မူတည်၍ URL ပြင်ရန်လိုနိုင်သည်
     ping_url = f"{portal_host}/api/auth/keepalive/"
     def pinger():
+        print(f"\n📡 Internet လိုင်းကျမသွားအောင် ထိန်းထားသည်... (Ctrl+C ဖြင့် ရပ်နိုင်သည်)")
         while True:
             try:
-                session.get(ping_url, params={'sessionId': sid}, timeout=5)
-                print(f"\r[📡 Background Ping: OK]        ", end="", flush=True)
+                r = session.get(ping_url, params={'sessionId': sid}, timeout=5)
+                if r.status_code == 200:
+                    print(f"\r[📡 Background Ping: OK] Session: {sid[:5]}...", end="", flush=True)
+                else:
+                    print(f"\r[📡 Background Ping: FAIL] Trying again...", end="", flush=True)
             except:
-                pass
+                print(f"\r[📡 Background Ping: ERROR] Trying again...", end="", flush=True)
             time.sleep(PING_INTERVAL)
-    threading.Thread(target=pinger, daemon=True).start()
+    
+    pinger_thread = threading.Thread(target=pinger, daemon=True)
+    pinger_thread.start()
 
 # --- MENU 1: TEST SPECIFIC CODE + CONNECT ---
 def test_specific_code():
@@ -113,7 +120,6 @@ def test_specific_code():
             # --- INTERNET ချိတ်ဆက်ခြင်း ---
             print("📡 Internet ချိတ်ဆက်နေသည်...")
             start_background_ping(session, portal_host, sid)
-            print("📡 Internet လိုင်းကျမသွားအောင် ထိန်းထားသည်... (Ctrl+C ဖြင့် ရပ်နိုင်သည်)")
             while True: time.sleep(1) # Script မရပ်အောင်ထားခြင်း
         else:
             print(f"\n❌ FAIL! Invalid Code: {code_to_test}")
@@ -232,7 +238,6 @@ def fast_internet_access():
             print(f"\n\033[92m✅ SUCCESS! Internet Access Connected.\033[0m")
             # --- PING ထိန်းထားရန် ---
             start_background_ping(session, portal_host, sid)
-            print("📡 Internet လိုင်းကျမသွားအောင် ထိန်းထားသည်... (Ctrl+C ဖြင့် ရပ်နိုင်သည်)")
             while True: time.sleep(1) # Script မရပ်အောင်ထားခြင်း
         else:
             print(f"\n❌ FAIL! Cannot connect with code.")
