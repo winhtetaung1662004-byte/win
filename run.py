@@ -10,50 +10,53 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs, urljoin
 
 # --- TERMUX SSL & HTTPS FIX ---
-# SSL certificate အမှားတက်ခြင်းကို လုံးဝကျော်လွှားရန်
 ssl._create_default_https_context = ssl._create_unverified_context
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
 CACHE_FILE = "device_cache.txt"
-# <--- အရေးကြီး: လင့်ခ်ကို https အစား http နဲ့ သုံးကြည့်ပါ --->
+# <--- သင့် Raw Link ကို ဒီမှာ ထည့်ပါ --->
 GITHUB_TOKEN_URL = "http://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 PING_THREADS = 5
-PING_INTERVAL = 0.1 
+PING_INTERVAL = 0.5 # Pinging ကို အနည်းငယ်လျှော့ချထားသည်
 TOKEN_DURATION_HOURS = 1 
 
 # --- FUNCTIONS ---
 def clear_screen():
-    """မျက်နှာပြင်ကို ရှင်းလင်းခြင်း"""
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def get_latest_token():
-    """GitHub ကနေ နောက်ဆုံး Token ကိုယူခြင်း"""
+def get_all_tokens():
+    """GitHub ကနေ Token စာရင်းအားလုံးကိုယူခြင်း"""
     try:
-        # verify=False ထည့်ထားသည်
         response = requests.get(GITHUB_TOKEN_URL, timeout=10, verify=False) 
         if response.status_code == 200:
-            # စာကြောင်းလိုက်ဖတ်ပြီး Token ကိုယူသည်
-            lines = response.text.strip().split('\n')
-            if lines:
-                return lines[0].strip() 
+            tokens = []
+            for line in response.text.strip().split('\n'):
+                token = line.split('|')[0].strip()
+                if token:
+                    tokens.append(token)
+            return tokens
     except Exception as e:
         print(f"❌ GitHub ကနေ Token ယူမရပါ။ Error: {e}")
-    return None
+    return []
 
 def check_cache():
-    """Cached Token ရှိမရှိစစ်ခြင်း"""
+    """Cached Token ရှိမရှိနှင့် သက်တမ်းစစ်ခြင်း"""
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, "r") as f:
-            data = f.read().strip()
-            if data:
-                return data
+            data = f.read().split('|')
+            if len(data) == 2:
+                token, timestamp = data[0], data[1]
+                # သက်တမ်းရှိသေးရင် return ပြန်
+                if datetime.now() < datetime.fromisoformat(timestamp):
+                    return token
     return None
 
 def save_cache(token):
-    """Token ကို ဖိုင်တွင်သိမ်းဆည်းခြင်း"""
+    """Token ကို သက်တမ်းနဲ့တကွ ဖိုင်တွင်သိမ်းဆည်းခြင်း"""
+    expiry_time = datetime.now() + timedelta(hours=TOKEN_DURATION_HOURS)
     with open(CACHE_FILE, "w") as f:
-        f.write(token)
+        f.write(f"{token}|{expiry_time.isoformat()}")
 
 def get_portal_info():
     """Captive Portal URL ကို အလိုအလျောက်ရှာဖွေခြင်း"""
@@ -88,9 +91,10 @@ def countdown_timer(end_time):
     while True:
         remaining = end_time - datetime.now()
         if remaining.total_seconds() <= 0:
-            print("\n⏳ Token သက်တမ်းကုန်ဆုံးသွားပါပြီ။")
+            print("\n⏳ Cache သက်တမ်းကုန်ဆုံးသွားပါပြီ။")
+            if os.path.exists(CACHE_FILE): os.remove(CACHE_FILE)
             os._exit(0)
-        print(f"\r[⏱️] သက်တမ်းကုန်ရန် ကျန်ရှိချိန်: {remaining}", end="", flush=True)
+        print(f"\r[⏱️] Internet သက်တမ်း: {remaining}", end="", flush=True)
         time.sleep(1)
 
 # --- MENU FUNCTION ---
@@ -101,92 +105,82 @@ def turbo_token_access():
     print("         🌐 TURBO TOKEN ACCESS         ")
     print("========================================\n")
     
-    # 1. သုံးမယ့်သူကို Token ရိုက်ခိုင်းခြင်း
-    user_token = input("👉 Activation Token ထည့်ပါ: ").strip()
-    
-    if not user_token:
-        print("❌ Token ထည့်ပေးရန်လိုအပ်သည်။")
-        time.sleep(2)
-        return
-
-    # 2. GitHub ကနေ Token ယူခြင်း
-    latest_token = get_latest_token()
-    if not latest_token:
-        print("❌ GitHub ကနေ Token ယူမရပါ။ (Internet စစ်ပါ)")
-        time.sleep(2)
-        return
-
-    # 3. Token တူမတူစစ်ခြင်း (Token | Date စနစ်ကို သုံးသည်)
-    valid_tokens = [line.split('|')[0].strip() for line in latest_token.split('\n')]
-    if user_token not in valid_tokens:
-        print("❌ Token မှားယွင်းနေသည်။")
-        time.sleep(2)
-        return
-    
-    print("✅ Token မှန်ကန်ပါသည်။")
-
-    # 4. Cache စစ်ခြင်း
+    # 1. Cache စစ်ခြင်း (အရင်ဝင်ထားပြီးသားလား)
     cached_token = check_cache()
-    if cached_token and cached_token == user_token:
-        print(f"✅ Cached Token က နောက်ဆုံးပေါ်ဖြစ်နေသည်: {user_token}")
+    if cached_token:
+        print(f"✅ Cached Token တွေ့ရှိသည်: {cached_token}")
         token = cached_token
     else:
-        print(f"🔄 Token အသစ်တွေ့ရှိသည်: {user_token}")
+        # 2. Token ရိုက်ခိုင်းခြင်း
+        user_token = input("👉 Activation Token ထည့်ပါ: ").strip()
+        if not user_token:
+            print("❌ Token ထည့်ပေးရန်လိုအပ်သည်။")
+            time.sleep(2)
+            return
+        
+        # 3. Token ကို Github နဲ့ စစ်ခြင်း
+        valid_tokens = get_all_tokens()
+        if user_token not in valid_tokens:
+            print("❌ Token မှားယွင်းနေသည်။")
+            time.sleep(2)
+            return
+        
+        print("✅ Token မှန်ကန်ပါသည်။")
         token = user_token
         save_cache(token)
 
-    # 5. Portal နှင့် Session ID ယူခြင်း
+    # 4. Portal နှင့် Session ID ယူခြင်း
     portal_host, portal_url = get_portal_info()
     if not portal_host:
-        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
-        time.sleep(2)
-        return
-
-    session = requests.Session()
-    sid = get_session_id(session, portal_url)
-    if not sid:
-        print("❌ Session ID ယူမရပါ။")
-        time.sleep(2)
-        return
-        
-    print(f"📡 Session Found: {sid}")
-
-    # 6. Token API သုံးပြီး Activation
-    voucher_api = f"{portal_host}/api/auth/voucher/"
-    
-    print(f"📡 Token ချိတ်ဆက်နေသည်: {token}")
-    try:
-        v_res = session.post(voucher_api, json={'accessCode': token, 'sessionId': sid, 'apiVersion': 1}, timeout=5, verify=False)
-        if v_res.status_code == 200 and "\"success\":true" in v_res.text:
-            print(f"\033[92m✅ SUCCESS! Token Activated.\033[0m")
-        else:
-            print(f"❌ Token Activation Failed. Token အမှားဖြစ်နိုင်သည်")
+        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။ (Internet ရနေပြီဖြစ်နိုင်သည်)")
+        # Internet ရနေရင်တောင် Pinging လိုအပ်နိုင်သည်
+    else:
+        session = requests.Session()
+        sid = get_session_id(session, portal_url)
+        if not sid:
+            print("❌ Session ID ယူမရပါ။")
+            time.sleep(2)
             return
-    except Exception as e:
-        print(f"❌ Error during activation: {e}")
-        return
+            
+        print(f"📡 Session Found: {sid}")
 
-    # 7. Turbo Pinging Threads များ (Gateway Auth Link)
-    parsed_portal = urlparse(portal_url)
-    params = parse_qs(parsed_portal.query)
-    gw_addr = params.get('gw_address', ['192.168.60.1'])[0]
-    gw_port = params.get('gw_port', ['2060'])[0]
-    auth_link = f"http://{gw_addr}:{gw_port}/wifidog/auth?token={sid}&phonenumber=12345"
+        # 5. Token API သုံးပြီး Activation
+        voucher_api = f"{portal_host}/api/auth/voucher/"
+        
+        print(f"📡 Token ချိတ်ဆက်နေသည်...")
+        try:
+            v_res = session.post(voucher_api, json={'accessCode': token, 'sessionId': sid, 'apiVersion': 1}, timeout=5, verify=False)
+            if v_res.status_code == 200 and "\"success\":true" in v_res.text:
+                print(f"\033[92m✅ SUCCESS! Token Activated.\033[0m")
+            else:
+                print(f"❌ Token Activation Failed. Token သက်တမ်းကုန်နေနိုင်သည်")
+                if os.path.exists(CACHE_FILE): os.remove(CACHE_FILE)
+                return
+        except Exception as e:
+            print(f"❌ Error during activation: {e}")
+            return
 
-    def high_speed_ping():
-        """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း"""
-        while True:
-            try:
-                session.get(auth_link, timeout=5, verify=False)
-            except:
-                pass
-            time.sleep(PING_INTERVAL)
+        # 6. Turbo Pinging Threads များ (Gateway Auth Link)
+        parsed_portal = urlparse(portal_url)
+        params = parse_qs(parsed_portal.query)
+        gw_addr = params.get('gw_address', ['192.168.60.1'])[0]
+        gw_port = params.get('gw_port', ['2060'])[0]
+        auth_link = f"http://{gw_addr}:{gw_port}/wifidog/auth?token={sid}&phonenumber=12345"
 
-    print(f"[*] Starting {PING_THREADS} Turbo Pinging Threads...")
-    for _ in range(PING_THREADS):
-        threading.Thread(target=high_speed_ping, daemon=True).start()
+        def high_speed_ping():
+            """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း"""
+            while True:
+                try:
+                    session.get(auth_link, timeout=5, verify=False)
+                except:
+                    pass
+                time.sleep(PING_INTERVAL)
 
-    # 8. Countdown Timer Thread စတင်ခြင်း
+        print(f"[*] Starting {PING_THREADS} Turbo Pinging Threads...")
+        for _ in range(PING_THREADS):
+            threading.Thread(target=high_speed_ping, daemon=True).start()
+
+    # 7. Countdown Timer Thread စတင်ခြင်း (သက်တမ်းစစ်ရန်)
     end_time = datetime.now() + timedelta(hours=TOKEN_DURATION_HOURS)
     threading.Thread(target=countdown_timer, args=(end_time,), daemon=True).start()
 
@@ -206,8 +200,8 @@ def show_menu():
     print("========================================")
     print("         🛠️  VOUCHER TOOLKIT           ")
     print("========================================")
-    print("1. 🌐 Turbo Token Access (GitHub)")
-    print("2. 🔄 Reset Cache (Force Check)")
+    print("1. 🌐 Turbo Token Access (Auto-Cache)")
+    print("2. 🔄 Reset Cache (Force Login)")
     print("========================================\n")
     choice = input("👉 ရွေးချယ်ပါ (1-2): ")
     return choice
@@ -224,4 +218,3 @@ if __name__ == "__main__":
         else:
             print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
             time.sleep(1)
-            
