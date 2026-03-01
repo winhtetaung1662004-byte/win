@@ -5,6 +5,7 @@ import time
 import threading
 import os
 import ssl
+import sys
 from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs, urljoin
 
@@ -92,7 +93,9 @@ def countdown_timer(end_time):
 def turbo_token_access():
     """Token Access ပြုလုပ်ခြင်း"""
     clear_screen()
-    print("\n🌐 Turbo Token Access စတင်ပြီ...")
+    print("========================================")
+    print("         🌐 TURBO TOKEN ACCESS         ")
+    print("========================================\n")
     
     # 1. သုံးမယ့်သူကို Token ရိုက်ခိုင်းခြင်း
     user_token = input("👉 Activation Token ထည့်ပါ: ").strip()
@@ -192,7 +195,28 @@ def turbo_token_access():
             break
 
 # --- MAIN ---
+def show_menu():
+    """Menu ကို ပြသခြင်း"""
+    clear_screen()
+    print("========================================")
+    print("         🛠️  VOUCHER TOOLKIT           ")
+    print("========================================")
+    print("1. 🌐 Turbo Token Access (GitHub)")
+    print("2. 🔄 Reset Cache (Force Check)")
+    print("========================================\n")
+    choice = input("👉 ရွေးချယ်ပါ (1-2): ")
+    return choice
+
 if __name__ == "__main__":
-    # စတင်တာနဲ့ Token တောင်းပြီး run မယ်
-    turbo_token_access()
-    
+    while True:
+        choice = show_menu()
+        if choice == '1':
+            turbo_token_access()
+        elif choice == '2':
+            if os.path.exists(CACHE_FILE): os.remove(CACHE_FILE)
+            print("✅ Cache ဖျက်ပြီးပါပြီ။")
+            time.sleep(1)
+        else:
+            print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
+            time.sleep(1)
+            
