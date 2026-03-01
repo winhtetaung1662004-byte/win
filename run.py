@@ -252,7 +252,7 @@ def show_menu():
     
     success_count = 0
     if os.path.exists(SUCCESS_CODES_FILE):
-        with open(SUCCESS_CODES_FILE, "r") as f:
+        with open(TRIED_CODES_FILE, "r") as f:
             success_count = len(f.readlines())
 
     print("========================================")
