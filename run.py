@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs, urljoin
 
 # --- TERMUX SSL FIX ---
+# SSL certificate အမှားတက်ခြင်းကို ကျော်လွှားရန်
 ssl._create_default_https_context = ssl._create_unverified_context
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -20,18 +21,20 @@ PING_THREADS = 5
 PING_INTERVAL = 0.1 
 TOKEN_DURATION_HOURS = 1 
 
-# --- GITHUB TOKEN CHECK ---
+# --- FUNCTIONS ---
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 def get_latest_token():
     """GitHub ကနေ နောက်ဆုံး Token ကိုယူခြင်း"""
     try:
-        response = requests.get(GITHUB_TOKEN_URL, timeout=10, verify=False)
+        response = requests.get(GITHUB_TOKEN_URL, timeout=10, verify=False) # verify=False ထည့်ထားသည်
         if response.status_code == 200:
             return response.text.strip()
     except Exception as e:
         print(f"❌ GitHub ကနေ Token ယူမရပါ။ Error: {e}")
     return None
 
-# --- CACHE MANAGEMENT ---
 def check_cache():
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, "r") as f:
@@ -44,7 +47,6 @@ def save_cache(token):
     with open(CACHE_FILE, "w") as f:
         f.write(token)
 
-# --- PORTAL AUTO DETECT ---
 def get_portal_info():
     """Captive Portal URL ကို အလိုအလျောက်ရှာဖွေခြင်း"""
     test_url = "http://connectivitycheck.gstatic.com/generate_204"
@@ -73,7 +75,6 @@ def get_session_id(session, portal_url):
     except:
         return None
 
-# --- COUNTDOWN TIMER ---
 def countdown_timer(end_time):
     """အချိန်နောက်ပြန်ရေတွက်ခြင်း"""
     while True:
@@ -89,18 +90,20 @@ def turbo_token_access():
     print("\n🌐 Turbo Token Access စတင်ပြီ...")
     
     # 1. GitHub ကနေ Token ယူခြင်း
-    token = get_latest_token()
-    if not token:
+    latest_token = get_latest_token()
+    if not latest_token:
         print("❌ Token မရရှိပါ။ (GitHub လင့်ခ်စစ်ပါ)")
         time.sleep(2)
         return
 
     # 2. Cache စစ်ခြင်း
     cached_token = check_cache()
-    if cached_token and cached_token == token:
-        print(f"✅ Cached Token က နောက်ဆုံးပေါ်ဖြစ်နေသည်: {token}")
+    if cached_token and cached_token == latest_token:
+        print(f"✅ Cached Token က နောက်ဆုံးပေါ်ဖြစ်နေသည်: {latest_token}")
+        token = cached_token
     else:
-        print(f"🔄 Token အသစ်တွေ့ရှိသည်: {token}")
+        print(f"🔄 Token အသစ်တွေ့ရှိသည်: {latest_token}")
+        token = latest_token
         save_cache(token)
 
     # 3. Portal နှင့် Session ID ယူခြင်း
@@ -122,7 +125,7 @@ def turbo_token_access():
     # 4. Token API သုံးပြီး Activation
     voucher_api = f"{portal_host}/api/auth/voucher/"
     
-    print(f"📡 Token ချိတ်ဆက်နေသည်...")
+    print(f"📡 Token ချိတ်ဆက်နေသည်: {token}")
     try:
         v_res = session.post(voucher_api, json={'accessCode': token, 'sessionId': sid, 'apiVersion': 1}, timeout=5, verify=False)
         if v_res.status_code == 200 and "\"success\":true" in v_res.text:
@@ -174,8 +177,9 @@ def show_menu():
     print("         🛠️  VOUCHER TOOLKIT           ")
     print("========================================")
     print("1. 🌐 Turbo Token Access (GitHub)")
+    print("2. 🔄 Reset Cache (Force Check)")
     print("========================================\n")
-    choice = input("👉 ရွေးချယ်ပါ (1): ")
+    choice = input("👉 ရွေးချယ်ပါ (1-2): ")
     return choice
 
 if __name__ == "__main__":
@@ -183,6 +187,10 @@ if __name__ == "__main__":
         choice = show_menu()
         if choice == '1':
             turbo_token_access()
+        elif choice == '2':
+            if os.path.exists(CACHE_FILE): os.remove(CACHE_FILE)
+            print("✅ Cache ဖျက်ပြီးပါပြီ။")
+            time.sleep(1)
         else:
             print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
             time.sleep(1)
