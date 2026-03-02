@@ -5,7 +5,6 @@ import time
 import threading
 import os
 import sys
-import psutil
 from urllib.parse import urlparse, parse_qs, urljoin
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -13,16 +12,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # --- CONFIGURATION ---
 WHITELIST_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 PING_THREADS = 5
-PING_INTERVAL = 0.1
+PING_INTERVAL = 0.1 
 
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
-
-def get_data_usage():
-    """လက်ရှိ အသုံးပြုနေတဲ့ Total Data Usage (MB) ကို တွက်ချက်ရန်"""
-    net_io = psutil.net_io_counters()
-    total_bytes = net_io.bytes_sent + net_io.bytes_recv
-    return total_bytes / (1024 * 1024)  # MB ပြောင်းခြင်း
 
 def show_banner():
     clear_screen()
@@ -39,7 +32,7 @@ def show_banner():
     print(banner)
 
 def check_approval():
-    """Device ID ကို keys.txt နဲ့ အမြဲတမ်း Up-to-date စစ်ဆေးခြင်း"""
+    """Device ID ကို keys.txt နဲ့ တိုက်စစ်ခြင်း"""
     try:
         # User ID ကို တိကျစွာယူခြင်း
         device_id = os.popen("id -u -n").read().strip()
@@ -61,7 +54,7 @@ def check_approval():
             print("[*] Contact Admin to get approval.")
             sys.exit()
     except Exception as e:
-        print(f"[!] Security Error: {e}")
+        print(f"[!] Security Check Error: {e}")
         sys.exit()
 
 def check_real_internet():
@@ -69,23 +62,8 @@ def check_real_internet():
         return requests.get("http://www.google.com", timeout=3).status_code == 200
     except: return False
 
-def status_display(start_time, start_data):
-    """Usage Time နဲ့ Data Usage ကို Live ပြပေးရန်"""
-    while True:
-        # အချိန်တွက်ချက်မှု
-        elapsed = time.time() - start_time
-        mins, secs = divmod(int(elapsed), 60)
-        hours, mins = divmod(mins, 60)
-        
-        # Data Usage တွက်ချက်မှု
-        current_data = get_data_usage()
-        session_data = current_data - start_data
-        
-        # တကြောင်းတည်းမှာ Live Update ပြခြင်း
-        print(f"\r\033[1;36m[*] Time: {hours:02d}:{mins:02d}:{secs:02d} | Data Used: {session_data:.2f} MB | Status: Online\033[0m", end='', flush=True)
-        time.sleep(1)
-
 def high_speed_ping(auth_link, session):
+    """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း"""
     while True:
         try:
             session.get(auth_link, timeout=5)
@@ -93,10 +71,11 @@ def high_speed_ping(auth_link, session):
         time.sleep(PING_INTERVAL)
 
 def start_process():
+    # ၁။ Approval စစ်ဆေးခြင်း (Menu မပေါ်ခင်)
     show_banner()
     check_approval()
     
-    # User Menu
+    # ၂။ User Menu ပြသခြင်း
     print("\n\033[1;33m[1] Start SWT Turbo Internet")
     print("[0] Exit\033[0m")
     
@@ -108,11 +87,8 @@ def start_process():
     clear_screen()
     show_banner()
     print("[*] Initializing system... Connecting to Gateway...")
-
-    start_time = None
-    start_data = get_data_usage()
-    timer_started = False
-
+    
+    # ၃။ အင်တာနက်ချိတ်ဆက်ခြင်း လုပ်ငန်းစဉ်
     while True:
         session = requests.Session()
         test_url = "http://connectivitycheck.gstatic.com/generate_204"
@@ -120,12 +96,9 @@ def start_process():
         try:
             r = requests.get(test_url, allow_redirects=True, timeout=5)
             
-            # အင်တာနက်ရသွားပြီဆိုလျှင် Status ပြမည်
+            # အင်တာနက်ရနေရင် ဆက်စောင့်
             if r.url == test_url and check_real_internet():
-                if not timer_started:
-                    start_time = time.time()
-                    threading.Thread(target=status_display, args=(start_time, start_data), daemon=True).start()
-                    timer_started = True
+                print(f"[{time.strftime('%H:%M:%S')}] Internet OK. Running...           ", end='\r')
                 time.sleep(5)
                 continue
             
@@ -142,9 +115,12 @@ def start_process():
             sid = parse_qs(urlparse(r2.url).query).get('sessionId', [None])[0]
             
             if sid:
-                # Voucher Activation (123456)
+                # Voucher Activation
                 voucher_api = f"{portal_host}/api/auth/voucher/"
-                session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+                try:
+                    session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+                except:
+                    pass
 
                 # Gateway Authentication
                 params = parse_qs(parsed_portal.query)
@@ -163,12 +139,5 @@ def start_process():
             time.sleep(2)
 
 if __name__ == "__main__":
-    # Dependency Check
-    try:
-        import psutil
-    except ImportError:
-        os.system('pip install psutil requests')
-        import psutil
-    
     start_process()
-    
+
