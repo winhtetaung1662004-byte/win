@@ -10,7 +10,7 @@ from urllib.parse import urlparse, parse_qs, urljoin
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# --- CONFIGURATION (ပြင်ရန်မလို) ---
+# --- CONFIGURATION ---
 WHITELIST_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 PING_THREADS = 5
 PING_INTERVAL = 0.1
@@ -39,14 +39,17 @@ def show_banner():
     print(banner)
 
 def check_approval():
-    """Device ID ကို keys.txt နဲ့ တိုက်စစ်ခြင်း"""
+    """Device ID ကို keys.txt နဲ့ အမြဲတမ်း Up-to-date စစ်ဆေးခြင်း"""
     try:
         # User ID ကို တိကျစွာယူခြင်း
         device_id = os.popen("id -u -n").read().strip()
         print(f"\033[1;33m[*] Detected ID: {device_id}\033[0m")
         print("[*] Checking Authorization...")
         
-        response = requests.get(WHITELIST_URL, timeout=10)
+        # Cache ကိုကျော်ပြီး URL အသစ်ကို ချက်ချင်းယူရန် headers ထည့်ခြင်း
+        headers = {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
+        response = requests.get(WHITELIST_URL, headers=headers, timeout=10)
+        
         allowed_users = response.text.splitlines()
         
         if device_id in allowed_users:
@@ -168,3 +171,4 @@ if __name__ == "__main__":
         import psutil
     
     start_process()
+    
