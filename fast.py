@@ -11,7 +11,6 @@ from urllib.parse import urlparse, parse_qs, urljoin
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
-# token.txt ရဲ့ Raw link ကို ဒီမှာထည့်ပါ
 TOKEN_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/token.txt"
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
@@ -41,11 +40,12 @@ def get_data_usage():
         return total_bytes / (1024 * 1024)
     except: return 0
 
-def check_token():
-    """Token ကို အချိန်တိုင်းစစ်ဆေးပြီး အချိန်ကုန်မကုန် ကြည့်ရန်"""
+def get_valid_token():
+    """Token နံပါတ်တောင်းပြီး စစ်ဆေးခြင်း"""
     try:
-        device_id = os.popen("id -u -n").read().strip()
-        print(f"\033[1;33m[*] Checking Authorization for: {device_id}...\033[0m")
+        show_banner()
+        print("\033[1;33m[*] Enter Token Number to Activate Access:\033[0m")
+        user_token = input("> ").strip()
         
         # Cache မဖြစ်အောင် headers ထည့်သည်
         headers = {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
@@ -55,13 +55,13 @@ def check_token():
         
         for entry in allowed_data:
             if ":" in entry:
-                user_id, token_time = entry.split(":")
-                if user_id == device_id:
-                    # Token အချိန်ကို မိနစ်ဖြင့်ပြန်ပေးသည်
+                token_num, token_time = entry.split(":")
+                if token_num == user_token:
+                    print(f"\033[1;32m[+] Token Accepted! Duration: {token_time} minutes.\033[0m")
+                    time.sleep(1)
                     return int(token_time)
         
-        print(f"\n\033[1;31m[!] Access Denied! ID: {device_id} is not authorized.\033[0m")
-        print("[*] Please renew your Token in token.txt.")
+        print(f"\n\033[1;31m[!] Invalid Token! {user_token} is not valid.\033[0m")
         sys.exit()
         
     except Exception as e:
@@ -83,16 +83,16 @@ def high_speed_ping(auth_link, session, sid):
         time.sleep(PING_INTERVAL)
 
 def start_process():
-    show_banner()
-    # ၁။ Token ကိုစစ်ဆေးပြီး အချိန်ယူခြင်း (အမြဲတမ်း တောင်းမည်)
-    token_minutes = check_token()
+    # Token နံပါတ်တောင်းခြင်း
+    token_minutes = get_valid_token()
     
-    # 2. အချိန်မှတ်ထားခြင်း (စစချင်းအချိန်)
+    # အချိန်မှတ်ထားခြင်း (စစချင်းအချိန်)
     start_session_time = time.time()
     token_limit = start_session_time + (token_minutes * 60)
     
-    print(f"\033[1;32m[+] Token Valid for: {token_minutes} minutes.\033[0m")
-    
+    # Internet Access ရွေးချယ်ခြင်း Menu
+    show_banner()
+    print(f"\033[1;32m[+] Session Valid for: {token_minutes} minutes.\033[0m")
     print(f"\n\033[1;33m[1] Start SWT Turbo Internet")
     print("[0] Exit\033[0m")
     choice = input("\nSelect Option: ")
@@ -108,9 +108,9 @@ def start_process():
     start_data = get_data_usage()
 
     while True:
-        # 3. အချိန်ကုန်မကုန် အမြဲစစ်ခြင်း
+        # အချိန်ကုန်မကုန် အမြဲစစ်ခြင်း
         if time.time() > token_limit:
-            print("\n\033[1;31m[!] Token Expired! Please get a new token in token.txt.\033[0m")
+            print("\n\033[1;31m[!] Token Expired! Please get a new token.\033[0m")
             sys.exit()
 
         session = requests.Session()
@@ -125,7 +125,7 @@ def start_process():
                     mins, secs = divmod(int(elapsed), 60)
                     hours, mins = divmod(mins, 60)
                     
-                    # 4. ကျန်ရှိသော Token အချိန် (မိနစ်)
+                    # ကျန်ရှိသော Token အချိန် (မိနစ်)
                     remaining = int((token_limit - time.time()) / 60)
                     
                     current_data = get_data_usage() - start_data
@@ -176,4 +176,4 @@ def start_process():
 
 if __name__ == "__main__":
     start_process()
-
+                    
