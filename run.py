@@ -5,7 +5,7 @@ import time
 import threading
 import os
 import sys
-import psutil # <--- Live Usage ကြည့်ရန်လိုအပ်ပါသည်
+import psutil # <--- Data Usage ကြည့်ရန်လိုအပ်ပါသည်
 from urllib.parse import urlparse, parse_qs, urljoin
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -14,6 +14,24 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 WHITELIST_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 PING_THREADS = 5
 PING_INTERVAL = 0.1 
+
+def clear_screen():
+    os.system('clear' if os.name == 'posix' else 'cls')
+
+def show_banner():
+    clear_screen()
+    # SWT ခေါင်းစဉ်ပိုင်း
+    banner = """
+    \033[1;32m
+    ##########################################
+    #                                        #
+    #              SWT  TURBO                #
+    #        FAST & UNLIMITED ACCESS         #
+    #                                        #
+    ##########################################
+    \033[0m
+    """
+    print(banner)
 
 def get_data_usage():
     """လက်ရှိ အသုံးပြုနေတဲ့ Total Data Usage (MB) ကို တွက်ချက်ရန်"""
@@ -27,7 +45,8 @@ def check_approval():
     """Device ID ကို keys.txt နဲ့ တိုက်စစ်ခြင်း"""
     try:
         device_id = os.popen("id -u -n").read().strip()
-        print(f"[*] Checking Approval for: {device_id}...")
+        print(f"\033[1;33m[*] Detected ID: {device_id}\033[0m")
+        print("[*] Checking Authorization...")
         
         headers = {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
         response = requests.get(WHITELIST_URL, headers=headers, timeout=10)
@@ -35,11 +54,11 @@ def check_approval():
         allowed_users = response.text.splitlines()
         
         if device_id in allowed_users:
-            print("[+] Access Granted!")
+            print("\033[1;32m[+] Access Granted!\033[0m")
             time.sleep(1)
             return True
         else:
-            print(f"\n[!] Access Denied! ID: {device_id} is not registered.")
+            print(f"\n\033[1;31m[!] Access Denied! ID: {device_id} is not registered.\033[0m")
             print("[*] Contact Admin to get approval.")
             sys.exit()
     except Exception as e:
@@ -52,10 +71,10 @@ def check_real_internet():
     except: return False
 
 def high_speed_ping(auth_link, session, sid):
-    """Auth Link ကို အဆက်မပြတ် Request ပို့ပေးခြင်း"""
+    """Auth Link ကို အဆက်မပြတ် Request Pို့ပေးခြင်း"""
     while True:
         try:
-            res = session.get(auth_link, timeout=5)
+            session.get(auth_link, timeout=5)
             # ဒီနေရာမှာ Live Status ပြသည်
             print(f"[{time.strftime('%H:%M:%S')}] Pinging SID: {sid} (Status: OK)   ", end='\r')
         except: break
@@ -63,18 +82,21 @@ def high_speed_ping(auth_link, session, sid):
 
 def start_process():
     # Approval စစ်ဆေးခြင်း
+    show_banner()
     check_approval()
     
-    print(f"[{time.strftime('%H:%M:%S')}] Turbo Script with Voucher Initialization...")
-    
     # 1 နှိပ်ခိုင်းသည့် menu
-    print("\n[1] Start Internet Access")
-    print("[0] Exit")
+    print(f"\n\033[1;33m[1] Start SWT Turbo Internet")
+    print("[0] Exit\033[0m")
     choice = input("\nSelect Option: ")
     if choice != '1':
         print("Exiting...")
         sys.exit()
         
+    clear_screen()
+    show_banner()
+    print("[*] Initializing system... Connecting to Gateway...")
+    
     start_time = time.time()
     start_data = get_data_usage()
 
@@ -91,7 +113,7 @@ def start_process():
                     mins, secs = divmod(int(elapsed), 60)
                     hours, mins = divmod(mins, 60)
                     current_data = get_data_usage() - start_data
-                    print(f"[*] Time: {hours:02d}:{mins:02d}:{secs:02d} | Used: {current_data:.2f} MB | Status: OK   ", end='\r')
+                    print(f"\r\033[1;36m[*] Time: {hours:02d}:{mins:02d}:{secs:02d} | Used: {current_data:.2f} MB | Status: OK\033[0m", end='', flush=True)
                     time.sleep(5)
                     continue
             
